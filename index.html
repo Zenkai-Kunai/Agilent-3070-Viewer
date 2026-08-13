@@ -314,7 +314,7 @@
       file1Text: '',
       file2Text: '',
       nodes: [],
-      boardOutline: [], // Added array for storing real board outline coordinates
+      boardOutline: [],
       currentSide: 'TOP', // 'TOP' or 'BOTTOM'
       visibility: {
         topPins: true,
@@ -355,20 +355,29 @@
       let parsingOutline = false;
 
       for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
+        let trimmed = line.trim();
+        if (!trimmed) continue;
 
-        // Catch the start of the BOARD_OUTLINE section
-        if (line.startsWith('BOARD_OUTLINE')) {
+        // Catch the start of OUTLINE or BOARD_OUTLINE section (case-insensitive)
+        if (/^(BOARD_)?OUTLINE/i.test(trimmed)) {
           parsingOutline = true;
           currentNode = null;
+          // Check if coordinates are on the same line after OUTLINE
+          const parts = trimmed.split(/\s+/);
+          if (parts.length > 1) {
+            const rest = parts.slice(1).join(' ');
+            const matches = rest.matchAll(/(-?\d+),\s*(-?\d+)/g);
+            for (const m of matches) {
+              outline.push({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) });
+            }
+          }
           continue;
         }
 
         // Catch the start of the NODE section
-        if (line.startsWith('NODE')) {
+        if (trimmed.startsWith('NODE')) {
           parsingOutline = false;
-          const parts = line.split(/\s+/);
+          const parts = trimmed.split(/\s+/);
           currentNode = {
             name: parts[1] || 'UNKNOWN',
             pins: []
@@ -378,16 +387,17 @@
         }
 
         if (parsingOutline) {
-          // Parse Outline coordinates
-          const coordMatch = line.match(/^(-?\d+),\s*(-?\d+)/);
+          // If we hit a semicolon or another section marker, stop parsing outline
+          if (trimmed.includes(';') || trimmed.startsWith('NODE')) {
+            parsingOutline = false;
+          }
+          const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)/);
           if (coordMatch) {
             outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
-          } else {
-            parsingOutline = false;
           }
         } else if (currentNode) {
           // Parse pin coordinates
-          const coordMatch = line.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
+          const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
             const x = parseInt(coordMatch[1], 10);
             const y = parseInt(coordMatch[2], 10);
@@ -543,38 +553,31 @@
       // 2. Pins & Component Representations
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          // Determines true side boolean
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
           const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
 
-          // Independent Visibility Checks
           const showTop = isTopPin && state.visibility.topPins;
           const showBottom = isBottomPin && state.visibility.bottomPins;
 
           if (!showTop && !showBottom) return;
 
           // Draw Pin Point
-          // Rendering a split circle if it exists and is visible on both sides
           if (showTop && showBottom) {
-            // Draw Blue Left Half (Top)
             mainCtx.beginPath();
             mainCtx.arc(pin.x, pin.y, 120, Math.PI / 2, Math.PI * 1.5, false);
             mainCtx.fillStyle = '#38bdf8';
             mainCtx.fill();
 
-            // Draw Red Right Half (Bottom)
             mainCtx.beginPath();
             mainCtx.arc(pin.x, pin.y, 120, Math.PI * 1.5, Math.PI / 2, false);
             mainCtx.fillStyle = '#f43f5e';
             mainCtx.fill();
           } else if (showTop) {
-            // Draw Full Blue (Top)
             mainCtx.beginPath();
             mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
             mainCtx.fillStyle = '#38bdf8';
             mainCtx.fill();
           } else if (showBottom) {
-            // Draw Full Red (Bottom)
             mainCtx.beginPath();
             mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
             mainCtx.fillStyle = '#f43f5e';
@@ -583,8 +586,9 @@
 
           // Component Outline simulation
           if (pin.ref) {
-            const showTopComp = showTop && state.visibility.topComp;
-            const showBottomComp = showBottom && state.visibility.bottomComp;
+            // FIXED: Evaluated against pin's exact side capability instead of visibility state constraint
+            const showTopComp = isTopPin && state.visibility.topComp;
+            const showBottomComp = isBottomPin && state.visibility.bottomComp;
 
             if (showTopComp || showBottomComp) {
               mainCtx.strokeStyle = showTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
@@ -718,7 +722,7 @@
     document.getElementById('chkBottomPins').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
     document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
-    document.getElementById('chkBoardOutline').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
+    document.getElementById('chkBoardOutline',).addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
 
     // Initial Layout Setup
     resizeCanvas();
