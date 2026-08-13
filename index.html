@@ -3,341 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent 3070 Minimalist Board Viewer</title>
+    <title>Agilent Board_XY Viewer</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; margin: 0; padding: 0; }
-        body { background-color: #1a1a1a; color: #cccccc; font-size: 12px; height: 100vh; display: flex; flex-direction: column; padding: 8px; gap: 8px; }
-        
-        .toolbar { background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-        .file-btn { background: #0066cc; color: #ffffff; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; border: none; }
-        .file-btn:hover { background: #0052a3; }
-        
-        .controls { display: flex; gap: 12px; align-items: center; }
-        .controls label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-        button.action-btn { background: #3a3a3a; color: #ffffff; border: 1px solid #555555; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
-        button.action-btn:hover { background: #4a4a4a; }
-
-        .workspace { flex: 1; display: flex; gap: 8px; min-height: 0; }
-        .sidebar { width: 220px; background: #242424; border: 1px solid #3a3a3a; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
-        .sidebar h4 { color: #888888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #3a3a3a; padding-bottom: 4px; }
-        .info-box { flex: 1; background: #121212; border: 1px solid #222222; border-radius: 3px; padding: 8px; font-family: monospace; font-size: 11px; color: #33ff33; white-space: pre-wrap; overflow-y: auto; }
-        
-        .canvas-area { flex: 1; background: #000000; border: 1px solid #3a3a3a; border-radius: 4px; position: relative; overflow: hidden; }
-        canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-        #file-input { display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+        }
+        #controls {
+            margin-bottom: 10px;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        #viewer-container {
+            flex: 1;
+            background-color: #000;
+            border: 2px solid #444;
+            position: relative;
+            overflow: hidden;
+            border-radius: 6px;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+        .legend {
+            display: flex;
+            gap: 12px;
+            font-size: 14px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .box {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            border: 1px solid #fff;
+        }
     </style>
 </head>
 <body>
 
-<div class="toolbar">
-    <label for="file-input" class="file-btn">📁 Open 'board' File</label>
-    <input type="file" id="file-input" accept="*" />
-
-    <div class="controls">
-        <label><input type="checkbox" id="chk-outline" checked> Board Outline</label>
-        <label><input type="checkbox" id="chk-top" checked> <span style="color:#00ffff;">Top Components</span></label>
-        <label><input type="checkbox" id="chk-bot" checked> <span style="color:#ffaa00;">Bottom Components</span></label>
-        <label><input type="checkbox" id="chk-pins" checked> Pin Locations</label>
-        <button class="action-btn" id="btn-reset">Reset View</button>
-    </div>
-</div>
-
-<div class="workspace">
-    <div class="sidebar">
-        <h4>System Log</h4>
-        <div id="log-box" class="info-box">Ready. Load a raw Agilent 'board' file...</div>
-        <h4>Selected Inspector</h4>
-        <div id="inspector-box" class="info-box" style="color: #ffffff;">Click on any component or pin on the canvas.</div>
+    <h2>Agilent Board_XY Graphic Viewer</h2>
+    
+    <div id="controls">
+        <input type="file" id="fileInput" accept=".txt,.xy,.board_xy,text/*">
+        <div class="legend">
+            <span class="legend-item"><span class="box" style="background: #ff007f;"></span> Board Outline</span>
+            <span class="legend-item"><span class="box" style="background: #00ffff;"></span> Top Side</span>
+            <span class="legend-item"><span class="box" style="background: #ffb700;"></span> Bottom Side</span>
+        </div>
+        <button onclick="resetZoom()">Reset Zoom</button>
     </div>
 
-    <div class="canvas-area">
+    <div id="viewer-container">
         <canvas id="boardCanvas"></canvas>
     </div>
-</div>
 
-<script>
-    let canvas, ctx;
-    let logEl, inspectorEl;
+    <script>
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('fileInput');
 
-    // Parsed Graphics Data
-    let boardOutlines = [];
-    let devices = [];
-    let pins = [];
+        let boardData = { outline: [], points: [] };
+        let scale = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX, startY;
 
-    // Viewport State
-    let scale = 1;
-    let panX = 0;
-    let panY = 0;
-    let isDragging = false;
-    let startX, startY;
-
-    window.addEventListener('DOMContentLoaded', () => {
-        canvas = document.getElementById('boardCanvas');
-        ctx = canvas.getContext('2d');
-        logEl = document.getElementById('log-box');
-        inspectorEl = document.getElementById('inspector-box');
-
-        resizeCanvas();
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            draw();
+        }
         window.addEventListener('resize', resizeCanvas);
 
-        // Direct File Loader
-        document.getElementById('file-input').addEventListener('change', (e) => {
+        fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            logEl.innerText = `Loading '${file.name}'...\n`;
-            
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                parseAgilentBoard(evt.target.result);
-                zoomFit();
+            reader.onload = (event) => {
+                parseBoardXY(event.target.result);
+                resetZoom();
             };
             reader.readAsText(file);
-            e.target.value = ''; 
         });
 
-        // View Controls
-        document.getElementById('btn-reset').addEventListener('click', zoomFit);
-        ['chk-outline', 'chk-top', 'chk-bot', 'chk-pins'].forEach(id => {
-            document.getElementById(id).addEventListener('change', redraw);
-        });
+        function parseBoardXY(text) {
+            boardData = { outline: [], points: [] };
+            const lines = text.split('\n');
 
-        // Canvas Controls
-        canvas.addEventListener('mousedown', e => {
-            if (e.button === 0 || e.button === 2) {
-                isDragging = true;
-                startX = e.clientX - panX;
-                startY = e.clientY - panY;
+            let inOutline = false;
+
+            for (let rawLine of lines) {
+                let line = rawLine.trim();
+                if (!line || line.startsWith('!') || line.startsWith('//')) continue;
+
+                // Detect Board Outline section
+                if (line.includes('BOARD OUTLINE') || line.includes('OUTLINE')) {
+                    inOutline = true;
+                    continue;
+                }
+
+                if (inOutline) {
+                    if (line.includes('END') || line.includes('NODE')) {
+                        inOutline = false;
+                    } else {
+                        const coords = line.match(/(-?\d+)\s*,\s*(-?\d+)/);
+                        if (coords) {
+                            boardData.outline.push({ x: parseInt(coords[1]), y: parseInt(coords[2]) });
+                        }
+                    }
+                }
+
+                // Detect Node / Component Coordinates
+                const nodeMatch = line.match(/(-?\d+)\s*,\s*(-?\d+)\s+([\w%\.]+)\s+(TOP|BOTTOM)/i);
+                if (nodeMatch) {
+                    boardData.points.push({
+                        x: parseInt(nodeMatch[1]),
+                        y: parseInt(nodeMatch[2]),
+                        name: nodeMatch[3],
+                        side: nodeMatch[4].toUpperCase()
+                    });
+                }
             }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(scale, scale);
+
+            // Draw Board Outline (Pink)
+            if (boardData.outline.length > 0) {
+                ctx.strokeStyle = '#ff007f';
+                ctx.lineWidth = 2 / scale;
+                ctx.beginPath();
+                ctx.moveTo(boardData.outline[0].x, -boardData.outline[0].y);
+                for (let i = 1; i < boardData.outline.length; i++) {
+                    ctx.lineTo(boardData.outline[i].x, -boardData.outline[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+
+            // Draw Nodes / Pins (Cyan for TOP, Yellow/Orange for BOTTOM)
+            const pointSize = Math.max(2, 8 / scale);
+            for (let pt of boardData.points) {
+                ctx.fillStyle = (pt.side === 'TOP') ? '#00ffff' : '#ffb700';
+                ctx.fillRect(pt.x - pointSize / 2, -pt.y - pointSize / 2, pointSize, pointSize);
+            }
+
+            ctx.restore();
+        }
+
+        function resetZoom() {
+            if (boardData.points.length === 0 && boardData.outline.length === 0) return;
+
+            let allX = [...boardData.outline.map(p => p.x), ...boardData.points.map(p => p.x)];
+            let allY = [...boardData.outline.map(p => -p.y), ...boardData.points.map(p => -p.y)];
+
+            let minX = Math.min(...allX);
+            let maxX = Math.max(...allX);
+            let minY = Math.min(...allY);
+            let maxY = Math.max(...allY);
+
+            let width = maxX - minX || 1;
+            let height = maxY - minY || 1;
+
+            scale = Math.min(canvas.width / width, canvas.height / height) * 0.8;
+            panX = (canvas.width - width * scale) / 2 - minX * scale;
+            panY = (canvas.height - height * scale) / 2 - minY * scale;
+
+            draw();
+        }
+
+        // Pan and Zoom Controls
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
         });
 
-        canvas.addEventListener('mousemove', e => {
+        canvas.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 panX = e.clientX - startX;
                 panY = e.clientY - startY;
-                redraw();
+                draw();
             }
         });
 
         canvas.addEventListener('mouseup', () => isDragging = false);
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        canvas.addEventListener('wheel', e => {
+        canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
             scale *= zoomFactor;
-            redraw();
+            draw();
         });
 
-        canvas.addEventListener('click', handleCanvasClick);
-    });
-
-    function resizeCanvas() {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-        redraw();
-    }
-
-    // Direct Agilent Board Parser
-    function parseAgilentBoard(text) {
-        boardOutlines = [];
-        devices = [];
-        pins = [];
-
-        const lines = text.split(/\r?\n/);
-        let inBoundary = false;
-        let currentBoundary = [];
-
-        // 1. Parse PCB Outlines
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            if (line.toLowerCase().startsWith('boundary')) {
-                inBoundary = true;
-                const nums = line.replace(/boundary/i, '').trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
-                if (nums.length >= 2) currentBoundary.push(...nums);
-                continue;
-            }
-
-            if (inBoundary) {
-                if (line.toLowerCase().startsWith('device') || line.toLowerCase().startsWith('node') || line === '}') {
-                    if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
-                    currentBoundary = [];
-                    inBoundary = false;
-                } else {
-                    const nums = line.split(/\s+/).map(Number).filter(n => !isNaN(n));
-                    if (nums.length > 0) currentBoundary.push(...nums);
-                }
-            }
-        }
-        if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
-
-        // 2. Parse Component Outlines & Pin Locations
-        const devRegex = /device\s+["']?([^"'\s]+)["']?\s*\{([^}]+)\}/gi;
-        let match;
-
-        while ((match = devRegex.exec(text)) !== null) {
-            const devId = match[1];
-            const block = match[2];
-            const side = /side\s+bottom/i.test(block) ? 'B' : 'T';
-
-            const pinRegex = /pin\s+["']?([^"'\s]+)["']?\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+([^\r\n]+)/gi;
-            let pMatch;
-            let devPins = [];
-
-            while ((pMatch = pinRegex.exec(block)) !== null) {
-                const pinObj = {
-                    dev: devId,
-                    id: pMatch[1],
-                    x: parseFloat(pMatch[2]),
-                    y: parseFloat(pMatch[3]),
-                    side: side,
-                    net: pMatch[4].trim()
-                };
-                pins.push(pinObj);
-                devPins.push(pinObj);
-            }
-
-            if (devPins.length > 0) {
-                const xs = devPins.map(p => p.x);
-                const ys = devPins.map(p => p.y);
-                
-                // Construct bounding box around component pins
-                const minX = Math.min(...xs), maxX = Math.max(...xs);
-                const minY = Math.min(...ys), maxY = Math.max(...ys);
-
-                devices.push({
-                    id: devId,
-                    side: side,
-                    minX: minX - 400,
-                    maxX: maxX + 400,
-                    minY: minY - 400,
-                    maxY: maxY + 400,
-                    pins: devPins
-                });
-            }
-        }
-
-        logEl.innerText = `Parsing Complete!\n\nBoundaries: ${boardOutlines.length}\nDevices: ${devices.length}\nPins: ${pins.length}`;
-    }
-
-    // Coordinate Transformations (Inverts Y for standard PCB layout view)
-    function worldToScreen(wx, wy) {
-        return {
-            x: (wx * scale) + panX,
-            y: canvas.height - ((wy * scale) + panY)
-        };
-    }
-
-    function screenToWorld(sx, sy) {
-        return {
-            x: (sx - panX) / scale,
-            y: (canvas.height - sy - panY) / scale
-        };
-    }
-
-    function redraw() {
-        if (!ctx) return;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const showOutline = document.getElementById('chk-outline').checked;
-        const showTop = document.getElementById('chk-top').checked;
-        const showBot = document.getElementById('chk-bot').checked;
-        const showPins = document.getElementById('chk-pins').checked;
-
-        // 1. Draw Board Perimeter
-        if (showOutline && boardOutlines.length > 0) {
-            ctx.strokeStyle = '#ff00ff';
-            ctx.lineWidth = 1.5;
-            boardOutlines.forEach(line => {
-                ctx.beginPath();
-                for (let i = 0; i < line.length - 1; i += 2) {
-                    const pt = worldToScreen(line[i], line[i+1]);
-                    if (i === 0) ctx.moveTo(pt.x, pt.y);
-                    else ctx.lineTo(pt.x, pt.y);
-                }
-                ctx.stroke();
-            });
-        }
-
-        // 2. Draw Component Outline Rectangles
-        devices.forEach(dev => {
-            if ((dev.side === 'T' && showTop) || (dev.side === 'B' && showBot)) {
-                ctx.strokeStyle = dev.side === 'T' ? '#00ffff' : '#ffaa00';
-                ctx.lineWidth = 1;
-                
-                const p1 = worldToScreen(dev.minX, dev.minY);
-                const p2 = worldToScreen(dev.maxX, dev.maxY);
-                
-                ctx.strokeRect(p1.x, p2.y, p2.x - p1.x, p1.y - p2.y);
-            }
-        });
-
-        // 3. Draw Component Pins
-        if (showPins) {
-            pins.forEach(p => {
-                if ((p.side === 'T' && showTop) || (p.side === 'B' && showBot)) {
-                    ctx.fillStyle = p.side === 'T' ? '#ffffff' : '#ffff00';
-                    const pt = worldToScreen(p.x, p.y);
-                    ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
-                }
-            });
-        }
-    }
-
-    function zoomFit() {
-        if (pins.length === 0 && boardOutlines.length === 0) return;
-
-        let allX = pins.map(p => p.x);
-        let allY = pins.map(p => p.y);
-
-        if (allX.length === 0) {
-            boardOutlines.forEach(line => {
-                for(let i=0; i<line.length-1; i+=2) {
-                    allX.push(line[i]);
-                    allY.push(line[i+1]);
-                }
-            });
-        }
-
-        const minX = Math.min(...allX), maxX = Math.max(...allX);
-        const minY = Math.min(...allY), maxY = Math.max(...allY);
-        const width = (maxX - minX) || 1000;
-        const height = (maxY - minY) || 1000;
-
-        scale = Math.min(canvas.width / width, canvas.height / height) * 0.8;
-        panX = (canvas.width - (width * scale)) / 2 - (minX * scale);
-        panY = (canvas.height - (height * scale)) / 2 - (minY * scale);
-
-        redraw();
-    }
-
-    function handleCanvasClick(e) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const world = screenToWorld(mouseX, mouseY);
-
-        // Pin Selection Hit Test
-        const hitRadius = 200 / scale;
-        const clickedPin = pins.find(p => Math.abs(p.x - world.x) < hitRadius && Math.abs(p.y - world.y) < hitRadius);
-
-        if (clickedPin) {
-            inspectorEl.innerText = `PIN DETECTED\n\nDevice: ${clickedPin.dev}\nPin ID: ${clickedPin.id}\nNet/Node: ${clickedPin.net}\nSide: ${clickedPin.side === 'T' ? 'Top' : 'Bottom'}\nLocation: (${Math.round(clickedPin.x)}, ${Math.round(clickedPin.y)})`;
-            return;
-        }
-
-        // Component Selection Hit Test
-        const clickedDev = devices.find(d => world.x >= d.minX && world.x <= d.maxX && world.y >= d.minY && world.y <= d.maxY);
-
-        if (clickedDev) {
-            inspectorEl.innerText = `COMPONENT DETECTED\n\nDevice ID: ${clickedDev.id}\nSide: ${clickedDev.side === 'T' ? 'Top' : 'Bottom'}\nTotal Pins: ${clickedDev.pins.length}`;
-            return;
-        }
-
-        inspectorEl.innerText = `Canvas Click:\nX: ${Math.round(world.x)}\nY: ${Math.round(world.y)}`;
-    }
-</script>
+        resizeCanvas();
+    </script>
 </body>
 </html>
