@@ -132,7 +132,7 @@
         }
         window.addEventListener('resize', resizeCanvas);
 
-        // Event Listeners for Controls
+        // Re-draw when controls change
         [chkOutline, chkTop, chkBottom, viewModeSelect].forEach(el => {
             el.addEventListener('change', draw);
         });
@@ -157,32 +157,56 @@
 
             for (let rawLine of lines) {
                 let line = rawLine.trim();
-                if (!line || line.startsWith('!') || line.startsWith('//')) continue;
+                if (!line || line.startsWith('!') || line.startsWith('//') || line.startsWith('#')) continue;
 
-                if (line.includes('BOARD OUTLINE') || line.includes('OUTLINE')) {
+                const upperLine = line.toUpperCase();
+
+                // Section Headers
+                if (upperLine.includes('OUTLINE')) {
                     inOutline = true;
                     continue;
                 }
 
+                // Exit outline mode if a new section starts or a node side is detected
+                if (upperLine.includes('END') || upperLine.includes('NODE') || upperLine.includes('DEVICE') || 
+                    upperLine.includes('TOP') || upperLine.includes('BOTTOM') || upperLine.includes('BOT')) {
+                    inOutline = false;
+                }
+
+                // 1. Process Board Outline Coordinates
                 if (inOutline) {
-                    if (line.includes('END') || line.includes('NODE')) {
-                        inOutline = false;
-                    } else {
-                        const coords = line.match(/(-?\d+)\s*,\s*(-?\d+)/);
-                        if (coords) {
-                            boardData.outline.push({ x: parseInt(coords[1]), y: parseInt(coords[2]) });
-                        }
+                    const coords = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/);
+                    if (coords) {
+                        boardData.outline.push({ x: parseInt(coords[1]), y: parseInt(coords[2]) });
+                        continue;
                     }
                 }
 
-                const nodeMatch = line.match(/(-?\d+)\s*,\s*(-?\d+)\s+([\w%\.]+)\s+(TOP|BOTTOM)/i);
+                // 2. Process Nodes / Pins (Supports TOP, BOTTOM, BOT, B, T and special characters in node names)
+                const nodeMatch = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)\s+([^\s]+)\s+(TOP|BOTTOM|BOT|B|T)\b/i);
+
                 if (nodeMatch) {
+                    let rawSide = nodeMatch[4].toUpperCase();
+                    let side = (rawSide === 'BOTTOM' || rawSide === 'BOT' || rawSide === 'B') ? 'BOTTOM' : 'TOP';
+
                     boardData.points.push({
                         x: parseInt(nodeMatch[1]),
                         y: parseInt(nodeMatch[2]),
                         name: nodeMatch[3],
-                        side: nodeMatch[4].toUpperCase()
+                        side: side
                     });
+                } else {
+                    // Fallback scanner for non-standard line formatting containing side keywords
+                    const fallbackCoords = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/);
+                    if (fallbackCoords && (upperLine.includes('TOP') || upperLine.includes('BOTTOM') || upperLine.includes('BOT'))) {
+                        let side = (upperLine.includes('BOTTOM') || upperLine.includes('BOT')) ? 'BOTTOM' : 'TOP';
+                        boardData.points.push({
+                            x: parseInt(fallbackCoords[1]),
+                            y: parseInt(fallbackCoords[2]),
+                            name: 'PIN',
+                            side: side
+                        });
+                    }
                 }
             }
         }
@@ -199,7 +223,7 @@
         }
 
         function getTransformedX(x) {
-            // Horizontal mirror when in Bottom View
+            // Mirrors board horizontally when 'Bottom View' is selected
             return (viewModeSelect.value === 'bottom') ? (2 * boardCenterX - x) : x;
         }
 
@@ -209,7 +233,7 @@
             ctx.translate(panX, panY);
             ctx.scale(scale, scale);
 
-            // 1. Draw Board Outline
+            // Draw Board Outline (Pink)
             if (chkOutline.checked && boardData.outline.length > 0) {
                 ctx.strokeStyle = '#ff007f';
                 ctx.lineWidth = 2 / scale;
@@ -226,7 +250,7 @@
                 ctx.stroke();
             }
 
-            // 2. Draw Nodes / Pins
+            // Draw Nodes / Pins (Cyan = TOP, Yellow = BOTTOM)
             const pointSize = Math.max(2, 8 / scale);
             for (let pt of boardData.points) {
                 if (pt.side === 'TOP' && !chkTop.checked) continue;
@@ -261,7 +285,7 @@
             draw();
         }
 
-        // Mouse Pan and Zoom
+        // Mouse Controls
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX - panX;
