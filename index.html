@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agilent Board Graphics Viewer (ICT 3070)</title>
-    <!-- Added JSZip library for browser-side ZIP parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- JSZip CDN with cross-origin safeguards for GitHub Pages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         * { box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         body { background-color: #c0c0c0; color: #000; font-size: 11px; padding: 4px; user-select: none; }
@@ -18,7 +18,7 @@
         .top-panel { display: flex; gap: 6px; margin-bottom: 4px; }
         .notes-box { flex: 2; border: 1px solid #808080; background: #e0e0e0; padding: 4px; }
         .notes-title { font-weight: bold; margin-bottom: 2px; }
-        #notes-content { width: 100%; height: 75px; background: #ffffff; border: 1px solid #707070; font-family: monospace; font-size: 11px; padding: 4px; overflow-y: auto; white-space: pre-wrap; }
+        #notes-content { width: 100%; height: 85px; background: #ffffff; border: 1px solid #707070; font-family: monospace; font-size: 11px; padding: 4px; overflow-y: auto; white-space: pre-wrap; }
         
         .features-box { flex: 1.5; border: 1px solid #808080; background: #c0c0c0; padding: 4px; display: grid; grid-template-columns: 1fr 40px 40px; align-items: center; gap: 2px; }
         .features-box header { font-weight: bold; grid-column: 1 / -1; margin-bottom: 2px; }
@@ -28,7 +28,7 @@
         button { background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040; padding: 3px; font-size: 10px; font-weight: bold; cursor: pointer; }
         button:active { border: 2px solid #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; }
 
-        .main-workspace { display: flex; gap: 4px; height: calc(100vh - 145px); }
+        .main-workspace { display: flex; gap: 4px; height: calc(100vh - 155px); }
         .no-xy-sidebar { width: 160px; background: #000000; border: 1px solid #707070; color: #00ff00; font-family: monospace; padding: 4px; display: flex; flex-direction: column; }
         .no-xy-sidebar header { color: #ffffff; font-family: sans-serif; font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 4px; border-bottom: 1px solid #404040; padding-bottom: 2px; }
         #no-xy-list { flex: 1; overflow-y: auto; font-size: 10px; }
@@ -46,7 +46,7 @@
     <div class="menubar">
         <span>Agilent Board Graphics Viewer (HTML5 Web Edition)</span>
         <label for="file-input" class="menubar-file">Open Board or ZIP File...</label>
-        <input type="file" id="file-input" accept=".zip,.board,*" />
+        <input type="file" id="file-input" accept=".zip, .board, application/zip, application/x-zip-compressed, *" />
     </div>
 
     <div class="top-panel">
@@ -92,9 +92,8 @@
 </div>
 
 <script>
-    const canvas = document.getElementById('boardCanvas');
-    const ctx = canvas.getContext('2d');
-    
+    let canvas, ctx, notesEl, statusEl;
+
     // Dataset Containers
     let boardOutlines = [];
     let devices = {};
@@ -108,71 +107,111 @@
     let isPanning = false;
     let startX, startY;
 
-    // Canvas Resize Handling
     function resizeCanvas() {
+        if (!canvas) return;
         canvas.width = canvas.parentElement.clientWidth;
         canvas.height = canvas.parentElement.clientHeight - 20;
         redraw();
     }
-    window.addEventListener('resize', resizeCanvas);
 
-    // Updated File Reader & ZIP Extraction Handling
-    document.getElementById('file-input').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+    window.addEventListener('DOMContentLoaded', () => {
+        canvas = document.getElementById('boardCanvas');
+        ctx = canvas.getContext('2d');
+        notesEl = document.getElementById('notes-content');
+        statusEl = document.getElementById('status-text');
 
-        const fileName = file.name.toLowerCase();
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-        // Handle ZIP Archive
-        if (fileName.endsWith('.zip')) {
-            document.getElementById('status-text').innerText = `Extracting '${file.name}'...`;
-            try {
-                const zip = await JSZip.loadAsync(file);
+        const fileInput = document.getElementById('file-input');
+        
+        fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            // Reset input value so selecting the same file again triggers change event
+            e.target.value = '';
 
-                // Priority search rules for Agilent board files
-                let targetFileName = Object.keys(zip.files).find(name => {
-                    const cleanName = name.toLowerCase().split('/').pop();
-                    return !zip.files[name].dir && (
-                        cleanName === 'board' ||
-                        cleanName.endsWith('.board') ||
-                        cleanName.includes('board')
-                    );
-                });
+            if (!file) return;
 
-                // Fallback: search for testplan or any text file if strict board file not found
-                if (!targetFileName) {
-                    targetFileName = Object.keys(zip.files).find(name => {
-                        const cleanName = name.toLowerCase().split('/').pop();
-                        return !zip.files[name].dir && !cleanName.startsWith('.') && !name.startsWith('__MACOSX');
-                    });
-                }
+            console.log("Processing File:", file.name);
+            const fileName = file.name.toLowerCase();
 
-                if (!targetFileName) {
-                    alert('No readable file found inside the ZIP folder.');
-                    document.getElementById('status-text').innerText = 'ZIP Error';
+            if (fileName.endsWith('.zip')) {
+                if (typeof JSZip === 'undefined') {
+                    alert('JSZip library is blocked or not loaded. Check internet/CDN access.');
+                    statusEl.innerText = 'Error: JSZip missing';
                     return;
                 }
 
-                // Extract text directly in memory
-                const text = await zip.file(targetFileName).async('string');
-                parseAgilentBoard(text);
-                document.getElementById('status-text').innerText = `Loaded '${targetFileName}' from '${file.name}'`;
-                zoomFull();
-            } catch (err) {
-                console.error(err);
-                alert('Failed to read or parse the ZIP file.');
-                document.getElementById('status-text').innerText = 'ZIP Processing Failed';
+                statusEl.innerText = `Extracting '${file.name}'...`;
+                try {
+                    const zip = await JSZip.loadAsync(file);
+                    const fileList = Object.keys(zip.files).filter(name => !zip.files[name].dir);
+
+                    console.log("ZIP Contents:", fileList);
+                    notesEl.innerText = `ZIP contents (${fileList.length} files):\n` + fileList.join('\n') + '\n\nSearching for board file...';
+
+                    // Priority search ignoring parent directory paths
+                    let targetFileName = fileList.find(name => {
+                        const cleanName = name.split('/').pop().toLowerCase();
+                        return cleanName === 'board' || cleanName.endsWith('.board') || cleanName.includes('board');
+                    });
+
+                    // Fallback search to any valid text file inside
+                    if (!targetFileName) {
+                        targetFileName = fileList.find(name => {
+                            const cleanName = name.split('/').pop();
+                            return !cleanName.startsWith('.') && !name.includes('__MACOSX');
+                        });
+                    }
+
+                    if (!targetFileName) {
+                        notesEl.innerText += '\n[ERROR] No suitable target file found inside ZIP.';
+                        statusEl.innerText = 'ZIP Parsing Error';
+                        return;
+                    }
+
+                    notesEl.innerText += `\nSelected File: '${targetFileName}'`;
+                    const text = await zip.file(targetFileName).async('string');
+                    parseAgilentBoard(text);
+                    statusEl.innerText = `Loaded '${targetFileName}' from '${file.name}'`;
+                    zoomFull();
+                } catch (err) {
+                    console.error("ZIP Error:", err);
+                    notesEl.innerText = `Error reading ZIP archive:\n${err.message}`;
+                    statusEl.innerText = 'ZIP Read Failed';
+                }
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    parseAgilentBoard(evt.target.result);
+                    statusEl.innerText = `Loaded '${file.name}'`;
+                    zoomFull();
+                };
+                reader.readAsText(file);
             }
-        } else {
-            // Handle Direct Uncompressed Files
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                parseAgilentBoard(evt.target.result);
-                document.getElementById('status-text').innerText = `Loaded '${file.name}'`;
-                zoomFull();
-            };
-            reader.readAsText(file);
-        }
+        });
+
+        // Event Control Registrations
+        document.getElementById('btn-full').addEventListener('click', zoomFull);
+        document.getElementById('btn-redraw').addEventListener('click', redraw);
+        document.getElementById('btn-zoomin').addEventListener('click', () => { scale *= 1.25; redraw(); });
+        document.getElementById('btn-zoomout').addEventListener('click', () => { scale /= 1.25; redraw(); });
+
+        ['chk-outlines', 'chk-bot-xy', 'chk-top-xy', 'chk-bot-dev', 'chk-top-dev'].forEach(id => {
+            document.getElementById(id).addEventListener('change', redraw);
+        });
+
+        canvas.addEventListener('mousedown', e => { if (e.button === 2 || e.button === 0) { isPanning = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; } });
+        canvas.addEventListener('mousemove', e => { if (isPanning) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; redraw(); } });
+        canvas.addEventListener('mouseup', () => isPanning = false);
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            scale *= zoomFactor;
+            redraw();
+        });
     });
 
     function parseAgilentBoard(text) {
@@ -181,22 +220,41 @@
         pins = [];
         noXyDevices = [];
 
-        // 1. Boundary / Outline Parsing
-        const boundaryRegex = /boundary\s+([^\r\n]+)/gi;
-        let match;
-        while ((match = boundaryRegex.exec(text)) !== null) {
-            const coords = match[1].trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
-            if (coords.length >= 4) boardOutlines.push(coords);
-        }
+        const lines = text.split(/\r?\n/);
+        let inBoundary = false;
+        let currentBoundary = [];
 
-        // 2. Devices and Pins Parsing
+        // 1. Line-by-Line Outline Parsing
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.toLowerCase().startsWith('boundary')) {
+                inBoundary = true;
+                const inlineNums = line.replace(/boundary/i, '').trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
+                if (inlineNums.length >= 2) currentBoundary.push(...inlineNums);
+                continue;
+            }
+            if (inBoundary) {
+                if (line.toLowerCase().startsWith('device') || line.toLowerCase().startsWith('node') || line === '}') {
+                    if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
+                    currentBoundary = [];
+                    inBoundary = false;
+                } else {
+                    const nums = line.split(/\s+/).map(Number).filter(n => !isNaN(n));
+                    if (nums.length > 0) currentBoundary.push(...nums);
+                }
+            }
+        }
+        if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
+
+        // 2. Flexible Device & Pin Parsing
         const devRegex = /device\s+["']?([^"'\s]+)["']?\s*\{([^}]+)\}/gi;
+        let match;
         while ((match = devRegex.exec(text)) !== null) {
             const devId = match[1];
             const block = match[2];
             const side = /side\s+bottom/i.test(block) ? 'B' : 'T';
 
-            const pinRegex = /pin\s+["']?([^"'\s]+)["']?\s+(-?\d+)\s+(-?\d+)\s+([^\r\n]+)/gi;
+            const pinRegex = /pin\s+["']?([^"'\s]+)["']?\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+([^\r\n]+)/gi;
             let pMatch;
             let devPins = [];
 
@@ -226,12 +284,13 @@
             }
         }
 
-        // Populate No-XY Listbox
+        // Diagnostic summary output
+        notesEl.innerText += `\n\n--- PARSE SUMMARY ---\nOutlines Found: ${boardOutlines.length}\nDevices Found: ${Object.keys(devices).length}\nPins Processed: ${pins.length}\nNo-XY Devices: ${noXyDevices.length}`;
+
         const listContainer = document.getElementById('no-xy-list');
         listContainer.innerHTML = noXyDevices.map(d => `<div>${d}</div>`).join('');
     }
 
-    // Coordinate Conversion
     function worldToScreen(wx, wy) {
         const sx = (wx * scale) + offsetX;
         const sy = canvas.height - ((wy * scale) + offsetY);
@@ -244,8 +303,8 @@
         return { x: wx, y: wy };
     }
 
-    // Main Canvas Redraw
     function redraw() {
+        if (!ctx) return;
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -255,7 +314,6 @@
         const showTopXY = document.getElementById('chk-top-xy').checked;
         const showBotXY = document.getElementById('chk-bot-xy').checked;
 
-        // 1. Draw Outlines
         if (showOutlines) {
             ctx.strokeStyle = '#ff00ff';
             ctx.lineWidth = 1.5;
@@ -270,7 +328,6 @@
             });
         }
 
-        // 2. Draw Device Outlines
         Object.keys(devices).forEach(devId => {
             const dev = devices[devId];
             if ((dev.side === 'T' && showTopDev) || (dev.side === 'B' && showBotDev)) {
@@ -282,7 +339,6 @@
             }
         });
 
-        // 3. Draw Pins / X-Y Locations
         pins.forEach(p => {
             if ((p.side === 'T' && showTopXY) || (p.side === 'B' && showBotXY)) {
                 ctx.fillStyle = p.side === 'T' ? '#ffffff' : '#ffff00';
@@ -292,39 +348,6 @@
         });
     }
 
-    // Hit Testing & Notes Output
-    canvas.addEventListener('click', function(e) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const world = screenToWorld(mouseX, mouseY);
-
-        // Pin Search Threshold (Tenth-Mils)
-        const hitRadius = 150 / scale;
-        const clickedPin = pins.find(p => Math.abs(p.x - world.x) < hitRadius && Math.abs(p.y - world.y) < hitRadius);
-
-        const notes = document.getElementById('notes-content');
-        if (clickedPin) {
-            notes.innerText = `SELECTED PIN:\nDevice: ${clickedPin.dev}\nPin No: ${clickedPin.id}\nNode/Net: ${clickedPin.node}\nSide: ${clickedPin.side === 'T' ? 'Top' : 'Bottom'}\nX-Y: (${Math.round(clickedPin.x)}, ${Math.round(clickedPin.y)}) Tenth-Mils`;
-            return;
-        }
-
-        // Device Search
-        const clickedDevKey = Object.keys(devices).find(key => {
-            const b = devices[key].bbox;
-            return world.x >= b[0] && world.x <= b[2] && world.y >= b[1] && world.y <= b[3];
-        });
-
-        if (clickedDevKey) {
-            const dev = devices[clickedDevKey];
-            notes.innerText = `SELECTED DEVICE:\nDevice ID: ${clickedDevKey}\nSide: ${dev.side === 'T' ? 'Top' : 'Bottom'}\nTotal Pins: ${dev.pins.length}\nBBox: [${Math.round(dev.bbox[0])}, ${Math.round(dev.bbox[1])}, ${Math.round(dev.bbox[2])}, ${Math.round(dev.bbox[3])}]`;
-            return;
-        }
-
-        notes.innerText = `Location Clicked:\nX: ${Math.round(world.x)}, Y: ${Math.round(world.y)} Tenth-Mils`;
-    });
-
-    // View Controls
     function zoomFull() {
         if (pins.length === 0) return;
         const xs = pins.map(p => p.x);
@@ -340,32 +363,6 @@
         offsetY = (canvas.height - (bh * scale)) / 2 - (minY * scale);
         redraw();
     }
-
-    document.getElementById('btn-full').addEventListener('click', zoomFull);
-    document.getElementById('btn-redraw').addEventListener('click', redraw);
-    document.getElementById('btn-zoomin').addEventListener('click', () => { scale *= 1.25; redraw(); });
-    document.getElementById('btn-zoomout').addEventListener('click', () => { scale /= 1.25; redraw(); });
-
-    ['chk-outlines', 'chk-bot-xy', 'chk-top-xy', 'chk-bot-dev', 'chk-top-dev'].forEach(id => {
-        document.getElementById(id).addEventListener('change', redraw);
-    });
-
-    // Mouse Pan Controls
-    canvas.addEventListener('mousedown', e => { if (e.button === 2 || e.button === 0) { isPanning = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; } });
-    canvas.addEventListener('mousemove', e => { if (isPanning) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; redraw(); } });
-    canvas.addEventListener('mouseup', () => isPanning = false);
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-    // Wheel Zoom Controls
-    canvas.addEventListener('wheel', e => {
-        e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-        scale *= zoomFactor;
-        redraw();
-    });
-
-    // Initialize layout dimensions on load
-    resizeCanvas();
 </script>
 </body>
 </html>
