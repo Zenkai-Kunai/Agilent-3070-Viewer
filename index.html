@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agilent 3070 Testplan Visualizer</title>
+    <!-- Import VSS Vanilla via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vss-vanilla/dist/vss-vanilla.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .btn {
+            background-color: #0066cc;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background-color: #0052a3;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        #file-name {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .canvas-container {
+            flex-grow: 1;
+            background-color: #111;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <!-- Button to open directory / internal folder -->
+        <label for="folder-input" class="btn">Choose Folder</label>
+        <input type="file" id="folder-input" webkitdirectory directory multiple />
+
+        <!-- Button to pick single testplan file -->
+        <label for="file-input" class="btn">Choose Testplan File</label>
+        <input type="file" id="file-input" accept=".testplan,.txt,.pgm,.basic" />
+
+        <span id="file-name">No file selected</span>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="vss-canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('vss-canvas');
+        const fileNameDisplay = document.getElementById('file-name');
+        
+        // Initialize Canvas size
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Initialize VSS (Visual Scene System) on Canvas
+        const ctx = canvas.getContext('2d');
+
+        // Render routine for drawing parsed test blocks onto the canvas
+        function renderVisualization(sections) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!sections || sections.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('Select a valid Agilent 3070 testplan file to render structure.', 20, 40);
+                return;
+            }
+
+            const startX = 50;
+            let currentY = 40;
+            const blockWidth = 320;
+            const blockHeight = 45;
+            const gap = 25;
+
+            sections.forEach((sec, idx) => {
+                // Draw connecting line from previous node
+                if (idx > 0) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 2;
+                    ctx.moveTo(startX + blockWidth / 2, currentY - gap);
+                    ctx.lineTo(startX + blockWidth / 2, currentY);
+                    ctx.stroke();
+                }
+
+                // Draw Block
+                ctx.fillStyle = sec.color || '#333';
+                ctx.fillRect(startX, currentY, blockWidth, blockHeight);
+                ctx.strokeStyle = '#666';
+                ctx.strokeRect(startX, currentY, blockWidth, blockHeight);
+
+                // Draw Section Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText(sec.name, startX + 15, currentY + 26);
+
+                currentY += blockHeight + gap;
+            });
+        }
+
+        // Simple parser to extract execution logic from HP BASIC 3070 code
+        function parseTestplan(text) {
+            const sections = [];
+            const lines = text.split('\n');
+
+            lines.forEach(line => {
+                const l = line.toLowerCase().trim();
+                if (l.includes('test main') || l.includes('sub test_sections')) {
+                    sections.push({ name: 'MAIN EXECUTION START', color: '#2d5a88' });
+                } else if (l.includes('shorts') || l.includes('pre-shorts')) {
+                    sections.push({ name: 'SHORTS TEST', color: '#884444' });
+                } else if (l.includes('analog') || l.includes('discharge')) {
+                    sections.push({ name: 'ANALOG IN-CIRCUIT TEST', color: '#886622' });
+                } else if (l.includes('sps') || l.includes('power')) {
+                    sections.push({ name: 'POWER SUPPLY SETUP', color: '#228844' });
+                } else if (l.includes('scanworks') || l.includes('boundary')) {
+                    sections.push({ name: 'JTAG / BOUNDARY SCAN', color: '#662288' });
+                } else if (l.includes('functional') || l.includes('digital')) {
+                    sections.push({ name: 'DIGITAL / FUNCTIONAL TEST', color: '#228888' });
+                }
+            });
+
+            // Deduplicate sequential identical sections for cleaner visual flow
+            return sections.filter((sec, idx, arr) => idx === 0 || sec.name !== arr[idx - 1].name);
+        }
+
+        // File Handler Function
+        function handleFile(file) {
+            if (!file) return;
+            fileNameDisplay.textContent = `Loaded: ${file.name}`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const code = e.target.result;
+                const parsedSections = parseTestplan(code);
+                renderVisualization(parsedSections);
+            };
+            reader.readAsText(file);
+        }
+
+        // Event Listeners for File Selection
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        document.getElementById('folder-input').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            // Look for testplan or basic file inside selected folder
+            const testplanFile = files.find(f => f.name.includes('testplan') || f.name.endsWith('.txt') || f.name.endsWith('.basic'));
+            if (testplanFile) {
+                handleFile(testplanFile);
+            } else if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // Initial blank state
+        renderVisualization([]);
+    </script>
+</body>
+</html>
