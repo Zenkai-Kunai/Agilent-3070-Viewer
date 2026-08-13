@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent Board_XY Viewer</title>
+    <title>Agilent Board_XY Graphic Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,12 +18,13 @@
         #controls {
             margin-bottom: 10px;
             background: #2d2d2d;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 6px;
             display: flex;
             align-items: center;
             gap: 15px;
             flex-wrap: wrap;
+            font-size: 14px;
         }
         #viewer-container {
             flex: 1;
@@ -39,21 +40,30 @@
             display: block;
             cursor: crosshair;
         }
-        .legend {
-            display: flex;
-            gap: 12px;
-            font-size: 14px;
-        }
-        .legend-item {
+        label {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        select, button {
+            background: #3a3a3a;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        select:hover, button:hover {
+            background: #4a4a4a;
         }
         .box {
             width: 12px;
             height: 12px;
             display: inline-block;
             border: 1px solid #fff;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -63,11 +73,32 @@
     
     <div id="controls">
         <input type="file" id="fileInput" accept=".txt,.xy,.board_xy,text/*">
-        <div class="legend">
-            <span class="legend-item"><span class="box" style="background: #ff007f;"></span> Board Outline</span>
-            <span class="legend-item"><span class="box" style="background: #00ffff;"></span> Top Side</span>
-            <span class="legend-item"><span class="box" style="background: #ffb700;"></span> Bottom Side</span>
+        
+        <!-- View Mode Selector -->
+        <div>
+            <label for="viewMode" style="display:inline;">View: </label>
+            <select id="viewMode">
+                <option value="top">Top View</option>
+                <option value="bottom">Bottom View (Mirrored)</option>
+            </select>
         </div>
+
+        <!-- Layer Checkboxes -->
+        <label>
+            <input type="checkbox" id="chkOutline" checked>
+            <span class="box" style="background: #ff007f;"></span> Board Outline
+        </label>
+        
+        <label>
+            <input type="checkbox" id="chkTop" checked>
+            <span class="box" style="background: #00ffff;"></span> Top Side
+        </label>
+        
+        <label>
+            <input type="checkbox" id="chkBottom" checked>
+            <span class="box" style="background: #ffb700;"></span> Bottom Side
+        </label>
+
         <button onclick="resetZoom()">Reset Zoom</button>
     </div>
 
@@ -80,7 +111,14 @@
         const ctx = canvas.getContext('2d');
         const fileInput = document.getElementById('fileInput');
 
+        // UI Controls
+        const chkOutline = document.getElementById('chkOutline');
+        const chkTop = document.getElementById('chkTop');
+        const chkBottom = document.getElementById('chkBottom');
+        const viewModeSelect = document.getElementById('viewMode');
+
         let boardData = { outline: [], points: [] };
+        let boardCenterX = 0;
         let scale = 1;
         let panX = 0;
         let panY = 0;
@@ -94,6 +132,11 @@
         }
         window.addEventListener('resize', resizeCanvas);
 
+        // Event Listeners for Controls
+        [chkOutline, chkTop, chkBottom, viewModeSelect].forEach(el => {
+            el.addEventListener('change', draw);
+        });
+
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -101,6 +144,7 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 parseBoardXY(event.target.result);
+                calculateCenter();
                 resetZoom();
             };
             reader.readAsText(file);
@@ -109,14 +153,12 @@
         function parseBoardXY(text) {
             boardData = { outline: [], points: [] };
             const lines = text.split('\n');
-
             let inOutline = false;
 
             for (let rawLine of lines) {
                 let line = rawLine.trim();
                 if (!line || line.startsWith('!') || line.startsWith('//')) continue;
 
-                // Detect Board Outline section
                 if (line.includes('BOARD OUTLINE') || line.includes('OUTLINE')) {
                     inOutline = true;
                     continue;
@@ -133,7 +175,6 @@
                     }
                 }
 
-                // Detect Node / Component Coordinates
                 const nodeMatch = line.match(/(-?\d+)\s*,\s*(-?\d+)\s+([\w%\.]+)\s+(TOP|BOTTOM)/i);
                 if (nodeMatch) {
                     boardData.points.push({
@@ -146,30 +187,54 @@
             }
         }
 
+        function calculateCenter() {
+            let allX = [...boardData.outline.map(p => p.x), ...boardData.points.map(p => p.x)];
+            if (allX.length > 0) {
+                let minX = Math.min(...allX);
+                let maxX = Math.max(...allX);
+                boardCenterX = (minX + maxX) / 2;
+            } else {
+                boardCenterX = 0;
+            }
+        }
+
+        function getTransformedX(x) {
+            // Horizontal mirror when in Bottom View
+            return (viewModeSelect.value === 'bottom') ? (2 * boardCenterX - x) : x;
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.translate(panX, panY);
             ctx.scale(scale, scale);
 
-            // Draw Board Outline (Pink)
-            if (boardData.outline.length > 0) {
+            // 1. Draw Board Outline
+            if (chkOutline.checked && boardData.outline.length > 0) {
                 ctx.strokeStyle = '#ff007f';
                 ctx.lineWidth = 2 / scale;
                 ctx.beginPath();
-                ctx.moveTo(boardData.outline[0].x, -boardData.outline[0].y);
+                
+                let startX = getTransformedX(boardData.outline[0].x);
+                ctx.moveTo(startX, -boardData.outline[0].y);
+
                 for (let i = 1; i < boardData.outline.length; i++) {
-                    ctx.lineTo(boardData.outline[i].x, -boardData.outline[i].y);
+                    let curX = getTransformedX(boardData.outline[i].x);
+                    ctx.lineTo(curX, -boardData.outline[i].y);
                 }
                 ctx.closePath();
                 ctx.stroke();
             }
 
-            // Draw Nodes / Pins (Cyan for TOP, Yellow/Orange for BOTTOM)
+            // 2. Draw Nodes / Pins
             const pointSize = Math.max(2, 8 / scale);
             for (let pt of boardData.points) {
+                if (pt.side === 'TOP' && !chkTop.checked) continue;
+                if (pt.side === 'BOTTOM' && !chkBottom.checked) continue;
+
                 ctx.fillStyle = (pt.side === 'TOP') ? '#00ffff' : '#ffb700';
-                ctx.fillRect(pt.x - pointSize / 2, -pt.y - pointSize / 2, pointSize, pointSize);
+                let renderX = getTransformedX(pt.x);
+                ctx.fillRect(renderX - pointSize / 2, -pt.y - pointSize / 2, pointSize, pointSize);
             }
 
             ctx.restore();
@@ -196,7 +261,7 @@
             draw();
         }
 
-        // Pan and Zoom Controls
+        // Mouse Pan and Zoom
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX - panX;
