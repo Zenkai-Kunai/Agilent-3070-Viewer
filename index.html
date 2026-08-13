@@ -314,7 +314,7 @@
       file1Text: '',
       file2Text: '',
       nodes: [],
-      outlines: [],
+      boardOutline: [], // Added array for storing real board outline coordinates
       currentSide: 'TOP', // 'TOP' or 'BOTTOM'
       visibility: {
         topPins: true,
@@ -349,62 +349,69 @@
     // Parse Agilent 3070 board_xy file content
     function parseBoardXY(text) {
       const nodes = [];
-      const outlines = [];
+      const outline = [];
       const lines = text.split('\n');
       let currentNode = null;
-      let inOutlineSection = false;
+      let parsingOutline = false;
 
       for (let line of lines) {
         line = line.trim();
         if (!line) continue;
 
-        if (line.includes('PRIMITIVE') || line.includes('OUTLINE') || line.includes('BORDER')) {
-          inOutlineSection = true;
+        // Catch the start of the BOARD_OUTLINE section
+        if (line.startsWith('BOARD_OUTLINE')) {
+          parsingOutline = true;
           currentNode = null;
           continue;
         }
 
+        // Catch the start of the NODE section
         if (line.startsWith('NODE')) {
-          inOutlineSection = false;
+          parsingOutline = false;
           const parts = line.split(/\s+/);
           currentNode = {
             name: parts[1] || 'UNKNOWN',
             pins: []
           };
           nodes.push(currentNode);
-        } else if (inOutlineSection) {
-          const outlineCoords = [...line.matchAll(/(-?\d+),\s*(-?\d+)/g)];
-          if (outlineCoords.length > 0) {
-            const path = outlineCoords.map(m => ({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) }));
-            outlines.push(path);
+          continue;
+        }
+
+        if (parsingOutline) {
+          // Parse Outline coordinates
+          const coordMatch = line.match(/^(-?\d+),\s*(-?\d+)/);
+          if (coordMatch) {
+            outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
+          } else {
+            parsingOutline = false;
           }
         } else if (currentNode) {
-          // Parse pin coordinates: e.g. "190, 3050 J3.1 TOP NO_PROBE;"
+          // Parse pin coordinates
           const coordMatch = line.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
             const x = parseInt(coordMatch[1], 10);
             const y = parseInt(coordMatch[2], 10);
             const meta = coordMatch[3] || '';
+            const isTop = meta.includes('TOP');
             const isBottom = meta.includes('BOTTOM');
             
-            // Extract Component Tag if available (e.g., J3.1)
             const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
             const compRef = compMatch ? compMatch[1] : '';
 
             currentNode.pins.push({
               x,
               y,
-              side: isBottom ? 'BOTTOM' : 'TOP',
+              side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
               ref: compRef,
               rawMeta: meta
             });
           }
         }
       }
-      return { nodes, outlines };
+      return { nodes, outline };
     }
 
-    function calculateBounds(nodes, outlines) {
+    function calculateBounds(nodes, outline = []) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       let pinCount = 0;
 
@@ -418,14 +425,15 @@
         });
       });
 
-      outlines.forEach(path => {
-        path.forEach(pt => {
+      // Factor in board outline for viewport bounds calculation
+      if (outline && outline.length > 0) {
+        outline.forEach(pt => {
           if (pt.x < minX) minX = pt.x;
           if (pt.x > maxX) maxX = pt.x;
           if (pt.y < minY) minY = pt.y;
           if (pt.y > maxY) maxY = pt.y;
         });
-      });
+      }
 
       if (minX === Infinity) {
         minX = 0; maxX = 50000; minY = -10000; maxY = 30000;
@@ -458,10 +466,10 @@
     // Process files
     function processFiles() {
       const combinedText = state.file1Text + '\n' + state.file2Text;
-      const parsed = parseBoardXY(combinedText);
-      state.nodes = parsed.nodes;
-      state.outlines = parsed.outlines;
-      calculateBounds(state.nodes, state.outlines);
+      const parsedData = parseBoardXY(combinedText);
+      state.nodes = parsedData.nodes;
+      state.boardOutline = parsedData.outline;
+      calculateBounds(state.nodes, state.boardOutline);
     }
 
     document.getElementById('fileInput1').addEventListener('change', (e) => {
@@ -515,18 +523,18 @@
       if (state.visibility.boardOutline) {
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
-
-        if (state.outlines.length > 0) {
-          state.outlines.forEach(path => {
-            if (path.length < 2) return;
-            mainCtx.beginPath();
-            mainCtx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-              mainCtx.lineTo(path[i].x, path[i].y);
-            }
-            mainCtx.stroke();
-          });
+        
+        // Draw Real Extracted Board Outline
+        if (state.boardOutline && state.boardOutline.length > 0) {
+          mainCtx.beginPath();
+          mainCtx.moveTo(state.boardOutline[0].x, state.boardOutline[0].y);
+          for (let i = 1; i < state.boardOutline.length; i++) {
+            mainCtx.lineTo(state.boardOutline[i].x, state.boardOutline[i].y);
+          }
+          mainCtx.closePath();
+          mainCtx.stroke();
         } else {
+          // Fallback box logic if BOARD_OUTLINE is empty
           const b = state.bounds;
           mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
         }
@@ -535,27 +543,48 @@
       // 2. Pins & Component Representations
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const isTopPin = pin.side === 'TOP';
-          const isBottomPin = pin.side === 'BOTTOM';
+          // Determines true side boolean
+          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
+          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
 
-          // Check Pin Visibility
-          if (isTopPin && !state.visibility.topPins) return;
-          if (isBottomPin && !state.visibility.bottomPins) return;
+          // Independent Visibility Checks
+          const showTop = isTopPin && state.visibility.topPins;
+          const showBottom = isBottomPin && state.visibility.bottomPins;
+
+          if (!showTop && !showBottom) return;
 
           // Draw Pin Point
-          mainCtx.beginPath();
-          mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
-          if (isTopPin) {
+          // Rendering a split circle if it exists and is visible on both sides
+          if (showTop && showBottom) {
+            // Draw Blue Left Half (Top)
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 120, Math.PI / 2, Math.PI * 1.5, false);
             mainCtx.fillStyle = '#38bdf8';
-          } else {
+            mainCtx.fill();
+
+            // Draw Red Right Half (Bottom)
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 120, Math.PI * 1.5, Math.PI / 2, false);
             mainCtx.fillStyle = '#f43f5e';
+            mainCtx.fill();
+          } else if (showTop) {
+            // Draw Full Blue (Top)
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
+            mainCtx.fillStyle = '#38bdf8';
+            mainCtx.fill();
+          } else if (showBottom) {
+            // Draw Full Red (Bottom)
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
+            mainCtx.fillStyle = '#f43f5e';
+            mainCtx.fill();
           }
-          mainCtx.fill();
 
           // Component Outline simulation
           if (pin.ref) {
-            const showTopComp = isTopPin && state.visibility.topComp;
-            const showBottomComp = isBottomPin && state.visibility.bottomComp;
+            const showTopComp = showTop && state.visibility.topComp;
+            const showBottomComp = showBottom && state.visibility.bottomComp;
 
             if (showTopComp || showBottomComp) {
               mainCtx.strokeStyle = showTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
@@ -602,16 +631,28 @@
       const offsetX = (w - boardW * scale) / 2;
       const offsetY = (h - boardH * scale) / 2;
 
-      // Draw Mini Board
+      // Draw Mini Board Outline
       overviewCtx.strokeStyle = '#334155';
-      overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
+      if (state.boardOutline && state.boardOutline.length > 0) {
+        overviewCtx.beginPath();
+        for (let i = 0; i < state.boardOutline.length; i++) {
+          const mx = offsetX + (state.boardOutline[i].x - b.minX + 1000) * scale;
+          const my = h - (offsetY + (state.boardOutline[i].y - b.minY + 1000) * scale);
+          if (i === 0) overviewCtx.moveTo(mx, my);
+          else overviewCtx.lineTo(mx, my);
+        }
+        overviewCtx.closePath();
+        overviewCtx.stroke();
+      } else {
+        overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
+      }
 
       // Draw Pins on Mini Map
+      overviewCtx.fillStyle = '#38bdf8';
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const mx = offsetX + (pin.x - b.minX + 1000) * scale;
           const my = h - (offsetY + (pin.y - b.minY + 1000) * scale);
-          overviewCtx.fillStyle = (pin.side === 'TOP') ? '#38bdf8' : '#f43f5e';
           overviewCtx.fillRect(mx, my, 1.5, 1.5);
         });
       });
