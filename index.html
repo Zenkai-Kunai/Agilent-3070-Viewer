@@ -3,200 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent 3070 Testplan Visualizer</title>
-    <!-- Import VSS Vanilla via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/vss-vanilla/dist/vss-vanilla.min.js"></script>
+    <title>Agilent 3070 Board Graphic Viewer</title>
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        * { box-sizing: border-box; font-family: "Courier New", Courier, monospace; }
+        body { margin: 0; padding: 0; background-color: #808080; color: #000; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Classic Motif/Unix Header Bar */
+        .header-bar {
+            background-color: #990033; color: white; padding: 4px 10px; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #404040;
         }
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+        
+        .controls-bar {
+            background-color: #c0c0c0; padding: 6px; border-bottom: 2px solid #808080;
+            display: flex; gap: 10px; align-items: center;
         }
-        .controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            background-color: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
+
         .btn {
-            background-color: #0066cc;
-            color: white;
-            padding: 10px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
+            background-color: #d4d0c8; border: 2px outset #ffffff; color: black;
+            padding: 2px 8px; font-weight: bold; cursor: pointer; font-size: 12px;
         }
-        .btn:hover {
-            background-color: #0052a3;
+        .btn:active { border-style: inset; }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; background-color: #c0c0c0; border: 2px inset #ffffff; }
+
+        /* Left Device Selection Panel */
+        .sidebar {
+            width: 200px; background-color: #d4d0c8; border-right: 2px solid #808080;
+            display: flex; flex-direction: column;
         }
-        input[type="file"] {
-            display: none;
-        }
-        #file-name {
-            color: #aaa;
-            font-size: 0.9em;
-        }
-        .canvas-container {
-            flex-grow: 1;
-            background-color: #111;
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #333;
-        }
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        .sidebar-title { background-color: #800000; color: white; padding: 2px 5px; font-size: 11px; font-weight: bold; }
+        .device-list { flex: 1; overflow-y: scroll; background-color: #ffffff; border: 1px solid #808080; margin: 4px; }
+        .device-item { padding: 2px 4px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .device-item:hover { background-color: #000080; color: white; }
+        .device-item.selected { background-color: #000080; color: white; }
+
+        /* Center Viewer Frame */
+        .viewer-frame { flex: 1; display: flex; flex-direction: column; background-color: #000000; position: relative; }
+        .viewer-title { background-color: #990033; color: white; text-align: center; font-size: 12px; font-weight: bold; padding: 2px; }
+        
+        canvas { flex: 1; width: 100%; height: 100%; display: block; background-color: #000000; cursor: crosshair; }
+
+        .status-bar { background-color: #c0c0c0; border-top: 2px solid #808080; padding: 2px 10px; font-size: 11px; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <!-- Button to open directory / internal folder -->
-        <label for="folder-input" class="btn">Choose Folder</label>
-        <input type="file" id="folder-input" webkitdirectory directory multiple />
-
-        <!-- Button to pick single testplan file -->
-        <label for="file-input" class="btn">Choose Testplan File</label>
-        <input type="file" id="file-input" accept=".testplan,.txt,.pgm,.basic" />
-
-        <span id="file-name">No file selected</span>
+    <div class="header-bar">
+        <span>Detailed View - Agilent 3070 Graphic Viewer</span>
+        <span id="cursor-pos">Cursor: 0, 0 Tenth Mils</span>
     </div>
 
-    <div class="canvas-container">
-        <canvas id="vss-canvas"></canvas>
+    <div class="controls-bar">
+        <label for="folder-input" class="btn">Choose Folder</label>
+        <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none;" />
+
+        <label for="file-input" class="btn">Choose CAD/Board File</label>
+        <input type="file" id="file-input" accept=".txt,.board,.xy,.csv" style="display:none;" />
+
+        <button class="btn" onclick="resetView()">Fit Screen</button>
+        <span id="loaded-file" style="font-size: 12px; color: #333;">No file loaded</span>
+    </div>
+
+    <div class="main-container">
+        <!-- Devices X-Y List Panel -->
+        <div class="sidebar">
+            <div class="sidebar-title">Devices with X-Y data:</div>
+            <div class="device-list" id="device-list">
+                <!-- Device entries appear here -->
+            </div>
+        </div>
+
+        <!-- Canvas Viewport -->
+        <div class="viewer-frame">
+            <div class="viewer-title">Detailed View</div>
+            <canvas id="board-canvas"></canvas>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span>Units: Tenth Mils</span>
+        <span id="node-count">Pads: 0</span>
     </div>
 
     <script>
-        const canvas = document.getElementById('vss-canvas');
-        const fileNameDisplay = document.getElementById('file-name');
-        
-        // Initialize Canvas size
+        const canvas = document.getElementById('board-canvas');
+        const ctx = canvas.getContext('2d');
+        const deviceListEl = document.getElementById('device-list');
+        const cursorPosEl = document.getElementById('cursor-pos');
+        const loadedFileEl = document.getElementById('loaded-file');
+        const nodeCountEl = document.getElementById('node-count');
+
+        let components = [];
+        let zoom = 1;
+        let panX = 0, panY = 0;
+        let selectedDevice = null;
+
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            canvas.height = canvas.parentElement.clientHeight - 20; // Adjust for title
+            draw();
         }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
-        // Initialize VSS (Visual Scene System) on Canvas
-        const ctx = canvas.getContext('2d');
+        // Generate synthetic grid structures matching Agilent 3070 CAD output if sample file is parsed
+        function generateSampleData() {
+            components = [];
+            const prefixes = ['%r1_2', '%cr3_4', '%xcr1_2', '%xcr3_4', '%r8_7', '%r10_9', '%p1_2', '%p1_3', '%p2_3', '%jp1_8', '%jp2_7'];
+            
+            // Generate grid BGA/IC components similar to photo
+            const layoutMap = [
+                { name: 'U1_BGA', x: 200, y: 300, rows: 16, cols: 16, pitch: 12, size: 8 },
+                { name: 'U2_BGA', x: 700, y: 300, rows: 16, cols: 16, pitch: 12, size: 8 },
+                { name: 'U3_QFP', x: 500, y: 500, rows: 6, cols: 6, pitch: 15, size: 10 },
+                { name: 'U4_SIP', x: 400, y: 200, rows: 8, cols: 2, pitch: 12, size: 8 }
+            ];
 
-        // Render routine for drawing parsed test blocks onto the canvas
-        function renderVisualization(sections) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (!sections || sections.length === 0) {
-                ctx.fillStyle = '#666';
-                ctx.font = '16px sans-serif';
-                ctx.fillText('Select a valid Agilent 3070 testplan file to render structure.', 20, 40);
-                return;
-            }
-
-            const startX = 50;
-            let currentY = 40;
-            const blockWidth = 320;
-            const blockHeight = 45;
-            const gap = 25;
-
-            sections.forEach((sec, idx) => {
-                // Draw connecting line from previous node
-                if (idx > 0) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = '#555';
-                    ctx.lineWidth = 2;
-                    ctx.moveTo(startX + blockWidth / 2, currentY - gap);
-                    ctx.lineTo(startX + blockWidth / 2, currentY);
-                    ctx.stroke();
+            layoutMap.forEach(ic => {
+                let pads = [];
+                for (let r = 0; r < ic.rows; r++) {
+                    for (let c = 0; c < ic.cols; c++) {
+                        pads.push({
+                            x: ic.x + (c * ic.pitch),
+                            y: ic.y + (r * ic.pitch),
+                            w: ic.size,
+                            h: ic.size,
+                            highlight: (r === 7 && c === 15) || (r === 10 && c === 4) // Highlighted test pin active nodes
+                        });
+                    }
                 }
-
-                // Draw Block
-                ctx.fillStyle = sec.color || '#333';
-                ctx.fillRect(startX, currentY, blockWidth, blockHeight);
-                ctx.strokeStyle = '#666';
-                ctx.strokeRect(startX, currentY, blockWidth, blockHeight);
-
-                // Draw Section Label
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 14px monospace';
-                ctx.fillText(sec.name, startX + 15, currentY + 26);
-
-                currentY += blockHeight + gap;
+                components.push({ name: ic.name, pads: pads });
             });
+
+            // Add discrete test devices
+            prefixes.forEach((pref, idx) => {
+                components.push({
+                    name: pref,
+                    pads: [
+                        { x: 100 + (idx * 20), y: 100 + (idx * 15), w: 10, h: 10, highlight: false },
+                        { x: 115 + (idx * 20), y: 100 + (idx * 15), w: 10, h: 10, highlight: false }
+                    ]
+                });
+            });
+
+            populateSidebar();
+            resetView();
         }
 
-        // Simple parser to extract execution logic from HP BASIC 3070 code
-        function parseTestplan(text) {
-            const sections = [];
+        function populateSidebar() {
+            deviceListEl.innerHTML = '';
+            components.forEach(comp => {
+                const item = document.createElement('div');
+                item.className = 'device-item';
+                item.textContent = comp.name;
+                item.onclick = () => {
+                    document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    selectedDevice = comp.name;
+                    draw();
+                };
+                deviceListEl.appendChild(item);
+            });
+            nodeCountEl.textContent = `Pads: ${components.reduce((acc, c) => acc + c.pads.length, 0)}`;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+
+            components.forEach(comp => {
+                const isSelected = comp.name === selectedDevice;
+                
+                comp.pads.forEach(pad => {
+                    if (pad.highlight) {
+                        ctx.fillStyle = '#ffffff'; // White active pin high-density node
+                    } else if (isSelected) {
+                        ctx.fillStyle = '#ffff00'; // Yellow selected component pin
+                    } else {
+                        ctx.fillStyle = '#000000';
+                        ctx.strokeStyle = '#66ccff'; // Cyan outlines (Agilent vector format)
+                        ctx.lineWidth = 1 / zoom;
+                    }
+
+                    if (pad.highlight || isSelected) {
+                        ctx.fillRect(pad.x, pad.y, pad.w, pad.h);
+                    } else {
+                        ctx.strokeRect(pad.x, pad.y, pad.w, pad.h);
+                    }
+                });
+            });
+
+            ctx.restore();
+        }
+
+        // Parse custom 3070 board file layout (Device X Y / Pad Coordinates)
+        function parseBoardFile(text) {
             const lines = text.split('\n');
+            components = [];
+            let currentComp = null;
 
             lines.forEach(line => {
-                const l = line.toLowerCase().trim();
-                if (l.includes('test main') || l.includes('sub test_sections')) {
-                    sections.push({ name: 'MAIN EXECUTION START', color: '#2d5a88' });
-                } else if (l.includes('shorts') || l.includes('pre-shorts')) {
-                    sections.push({ name: 'SHORTS TEST', color: '#884444' });
-                } else if (l.includes('analog') || l.includes('discharge')) {
-                    sections.push({ name: 'ANALOG IN-CIRCUIT TEST', color: '#886622' });
-                } else if (l.includes('sps') || l.includes('power')) {
-                    sections.push({ name: 'POWER SUPPLY SETUP', color: '#228844' });
-                } else if (l.includes('scanworks') || l.includes('boundary')) {
-                    sections.push({ name: 'JTAG / BOUNDARY SCAN', color: '#662288' });
-                } else if (l.includes('functional') || l.includes('digital')) {
-                    sections.push({ name: 'DIGITAL / FUNCTIONAL TEST', color: '#228888' });
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 3) {
+                    const name = parts[0];
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+
+                    if (!isNaN(x) && !isNaN(y)) {
+                        components.push({
+                            name: name,
+                            pads: [{ x: x, y: y, w: 10, h: 10, highlight: false }]
+                        });
+                    }
                 }
             });
 
-            // Deduplicate sequential identical sections for cleaner visual flow
-            return sections.filter((sec, idx, arr) => idx === 0 || sec.name !== arr[idx - 1].name);
+            populateSidebar();
+            resetView();
         }
 
-        // File Handler Function
-        function handleFile(file) {
-            if (!file) return;
-            fileNameDisplay.textContent = `Loaded: ${file.name}`;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const code = e.target.result;
-                const parsedSections = parseTestplan(code);
-                renderVisualization(parsedSections);
-            };
-            reader.readAsText(file);
+        function resetView() {
+            zoom = 1.2;
+            panX = 50;
+            panY = 50;
+            draw();
         }
 
-        // Event Listeners for File Selection
+        // Mouse interactions for panning/zooming and position tracking
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = Math.round((e.clientX - rect.left - panX) / zoom * 10);
+            const mouseY = Math.round((e.clientY - rect.top - panY) / zoom * 10);
+            cursorPosEl.textContent = `Cursor: ${mouseX}, ${mouseY} Tenth Mils`;
+        });
+
+        // File Select Handlers
         document.getElementById('file-input').addEventListener('change', (e) => {
-            handleFile(e.target.files[0]);
+            const file = e.target.files[0];
+            if (!file) return;
+            loadedFileEl.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (evt) => parseBoardFile(evt.target.result);
+            reader.readAsText(file);
         });
 
         document.getElementById('folder-input').addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            // Look for testplan or basic file inside selected folder
-            const testplanFile = files.find(f => f.name.includes('testplan') || f.name.endsWith('.txt') || f.name.endsWith('.basic'));
-            if (testplanFile) {
-                handleFile(testplanFile);
-            } else if (files.length > 0) {
-                handleFile(files[0]);
+            const boardFile = files.find(f => f.name.includes('board') || f.name.endsWith('.xy') || f.name.endsWith('.txt'));
+            if (boardFile) {
+                loadedFileEl.textContent = boardFile.name;
+                const reader = new FileReader();
+                reader.onload = (evt) => parseBoardFile(evt.target.result);
+                reader.readAsText(boardFile);
             }
         });
 
-        // Initial blank state
-        renderVisualization([]);
+        // Initialize default sample view matching screenshot
+        resizeCanvas();
+        generateSampleData();
     </script>
 </body>
 </html>
