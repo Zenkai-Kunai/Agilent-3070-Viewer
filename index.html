@@ -1,335 +1,639 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent Board_XY Graphic Viewer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1e1e1e;
-            color: #fff;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            height: 95vh;
-        }
-        #controls {
-            margin-bottom: 10px;
-            background: #2d2d2d;
-            padding: 10px 15px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            font-size: 14px;
-        }
-        #viewer-container {
-            flex: 1;
-            background-color: #000;
-            border: 2px solid #444;
-            position: relative;
-            overflow: hidden;
-            border-radius: 6px;
-        }
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            cursor: crosshair;
-        }
-        label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            user-select: none;
-        }
-        select, button {
-            background: #3a3a3a;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        select:hover, button:hover {
-            background: #4a4a4a;
-        }
-        .box {
-            width: 12px;
-            height: 12px;
-            display: inline-block;
-            border: 1px solid #fff;
-            border-radius: 2px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agilent 3070 Board Graphic Viewer</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+      --border-color: #334155;
+      --accent-color: #38bdf8;
+      --accent-hover: #0284c7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --top-color: #38bdf8;
+      --bottom-color: #f43f5e;
+      --outline-color: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation */
+    #sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px;
+      z-index: 10;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      overflow-y: auto;
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--accent-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    /* File Input Styling */
+    .file-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label.file-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      background: #1e293b;
+      border: 1px dashed var(--accent-color);
+      border-radius: 6px;
+      color: var(--accent-color);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    label.file-btn:hover {
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    /* Toggle Buttons */
+    .view-toggle-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      background: #1e293b;
+      color: var(--text-main);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-color);
+    }
+
+    .btn.active {
+      background: var(--accent-color);
+      color: #0f172a;
+      border-color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    /* Feature Checkboxes */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+
+    .checkbox-item input {
+      accent-color: var(--accent-color);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Overview Map */
+    #overview-container {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    #overviewCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Main Viewer Viewport */
+    #viewport {
+      flex: 1;
+      position: relative;
+      background-color: #050811;
+      cursor: grab;
+      overflow: hidden;
+    }
+
+    #viewport:active {
+      cursor: grabbing;
+    }
+
+    #mainCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Floating Stats Bar */
+    .stats-bar {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stats-bar span strong {
+      color: var(--text-main);
+    }
+  </style>
 </head>
 <body>
 
-    <h2>Agilent Board_XY Graphic Viewer</h2>
+  <!-- Sidebar Controls -->
+  <div id="sidebar">
+    <div class="brand-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+        <circle cx="8" cy="8" r="2"></circle>
+        <circle cx="16" cy="16" r="2"></circle>
+        <path d="M8 10v4h8"></path>
+      </svg>
+      Agilent 3070 Viewer
+    </div>
+
+    <!-- File Input Section -->
+    <div class="section-box">
+      <div class="section-title">Load Board File(s)</div>
+      <div class="file-input-group">
+        <label class="file-btn">
+          Select File 1 (or Full File)
+          <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
+        </label>
+        <div class="file-status" id="file1Status">No file selected</div>
+
+        <label class="file-btn" style="margin-top: 6px;">
+          Select File 2 (Optional)
+          <input type="file" id="fileInput2" accept=".file,.xy,.txt,*">
+        </label>
+        <div class="file-status" id="file2Status">No file selected</div>
+      </div>
+    </div>
+
+    <!-- View Mode Toggle -->
+    <div class="section-box">
+      <div class="section-title">Board Side View</div>
+      <div class="view-toggle-group">
+        <button class="btn active" id="btnTopView">Top Side</button>
+        <button class="btn" id="btnBottomView">Bottom Side</button>
+      </div>
+    </div>
+
+    <!-- Feature Display Filters -->
+    <div class="section-box">
+      <div class="section-title">Feature Visibility</div>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <span>Top Pins</span>
+          <input type="checkbox" id="chkTopPins" checked>
+        </label>
+        <label class="checkbox-item">
+          <span>Bottom Pins</span>
+          <input type="checkbox" id="chkBottomPins" checked>
+        </label>
+        <hr style="border-color: var(--border-color); margin: 2px 0;">
+        <label class="checkbox-item">
+          <span>Top Component Outline</span>
+          <input type="checkbox" id="chkTopComp" checked>
+        </label>
+        <label class="checkbox-item">
+          <span>Bottom Component Outline</span>
+          <input type="checkbox" id="chkBottomComp" checked>
+        </label>
+        <hr style="border-color: var(--border-color); margin: 2px 0;">
+        <label class="checkbox-item">
+          <span>Board Outline</span>
+          <input type="checkbox" id="chkBoardOutline" checked>
+        </label>
+      </div>
+    </div>
+
+    <!-- Overview Minimap -->
+    <div class="section-box">
+      <div class="section-title">Overview Map</div>
+      <div id="overview-container">
+        <canvas id="overviewCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Viewport Canvas -->
+  <div id="viewport">
+    <canvas id="mainCanvas"></canvas>
     
-    <div id="controls">
-        <input type="file" id="fileInput" accept=".txt,.xy,.board_xy,text/*">
-        
-        <!-- View Mode Selector -->
-        <div>
-            <label for="viewMode" style="display:inline;">View: </label>
-            <select id="viewMode">
-                <option value="top">Top View</option>
-                <option value="bottom">Bottom View (Mirrored)</option>
-            </select>
-        </div>
-
-        <!-- Layer Checkboxes -->
-        <label>
-            <input type="checkbox" id="chkOutline" checked>
-            <span class="box" style="background: #ff007f;"></span> Board Outline
-        </label>
-        
-        <label>
-            <input type="checkbox" id="chkTop" checked>
-            <span class="box" style="background: #00ffff;"></span> Top Side
-        </label>
-        
-        <label>
-            <input type="checkbox" id="chkBottom" checked>
-            <span class="box" style="background: #ffb700;"></span> Bottom Side
-        </label>
-
-        <button onclick="resetZoom()">Reset Zoom</button>
+    <div class="stats-bar">
+      <div>Nodes: <strong id="statNodes">0</strong></div>
+      <div>Components/Pins: <strong id="statPins">0</strong></div>
+      <div>Zoom: <strong id="statZoom">100%</strong></div>
     </div>
+  </div>
 
-    <div id="viewer-container">
-        <canvas id="boardCanvas"></canvas>
-    </div>
+  <script>
+    // State management
+    const state = {
+      file1Text: '',
+      file2Text: '',
+      nodes: [],
+      currentSide: 'TOP', // 'TOP' or 'BOTTOM'
+      visibility: {
+        topPins: true,
+        bottomPins: true,
+        topComp: true,
+        bottomComp: true,
+        boardOutline: true
+      },
+      bounds: { minX: 0, maxX: 1000, minY: 0, maxY: 1000 },
+      transform: { x: 0, y: 0, scale: 1 },
+      isDragging: false,
+      dragStart: { x: 0, y: 0 }
+    };
 
-    <script>
-        const canvas = document.getElementById('boardCanvas');
-        const ctx = canvas.getContext('2d');
-        const fileInput = document.getElementById('fileInput');
+    // Canvas contexts
+    const viewport = document.getElementById('viewport');
+    const mainCanvas = document.getElementById('mainCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    const overviewCanvas = document.getElementById('overviewCanvas');
+    const overviewCtx = overviewCanvas.getContext('2d');
 
-        const chkOutline = document.getElementById('chkOutline');
-        const chkTop = document.getElementById('chkTop');
-        const chkBottom = document.getElementById('chkBottom');
-        const viewModeSelect = document.getElementById('viewMode');
+    // Initialize dimensions
+    function resizeCanvas() {
+      mainCanvas.width = viewport.clientWidth;
+      mainCanvas.height = viewport.clientHeight;
+      overviewCanvas.width = overviewCanvas.parentElement.clientWidth;
+      overviewCanvas.height = overviewCanvas.parentElement.clientHeight;
+      render();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-        let boardData = { outline: [], points: [] };
-        let boardCenterX = 0;
-        let scale = 1;
-        let panX = 0;
-        let panY = 0;
-        let isDragging = false;
-        let startX, startY;
+    // Parse Agilent 3070 board_xy file content
+    function parseBoardXY(text) {
+      const nodes = [];
+      const lines = text.split('\n');
+      let currentNode = null;
 
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-            draw();
-        }
-        window.addEventListener('resize', resizeCanvas);
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
 
-        [chkOutline, chkTop, chkBottom, viewModeSelect].forEach(el => {
-            el.addEventListener('change', draw);
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                parseBoardXY(event.target.result);
-                calculateCenter();
-                resetZoom();
-            };
-            reader.readAsText(file);
-        });
-
-        function parseBoardXY(text) {
-            boardData = { outline: [], points: [] };
+        if (line.startsWith('NODE')) {
+          const parts = line.split(/\s+/);
+          currentNode = {
+            name: parts[1] || 'UNKNOWN',
+            pins: []
+          };
+          nodes.push(currentNode);
+        } else if (currentNode) {
+          // Parse pin coordinates: e.g. "190, 3050 J3.1 TOP NO_PROBE;"
+          const coordMatch = line.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
+          if (coordMatch) {
+            const x = parseInt(coordMatch[1], 10);
+            const y = parseInt(coordMatch[2], 10);
+            const meta = coordMatch[3] || '';
+            const isTop = meta.includes('TOP');
+            const isBottom = meta.includes('BOTTOM');
             
-            // Clean formatting and split by semicolons or newlines to handle dense blocks properly
-            const cleanText = text.replace(/[\r\n]+/g, ' ');
-            const statements = cleanText.split(';');
-            
-            let inOutline = false;
+            // Extract Component Tag if available (e.g., J3.1)
+            const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
+            const compRef = compMatch ? compMatch[1] : '';
 
-            for (let stmt of statements) {
-                stmt = stmt.trim();
-                if (!stmt) continue;
-
-                const upperStmt = stmt.toUpperCase();
-
-                if (upperStmt.startsWith('OUTLINE')) {
-                    inOutline = true;
-                    // Extract coordinates following OUTLINE keyword
-                    let coordStr = stmt.substring(7);
-                    extractCoords(coordStr, 'OUTLINE');
-                    continue;
-                }
-
-                if (upperStmt.startsWith('NODE') || upperStmt.startsWith('OTHER') || upperStmt.startsWith('UNITS') || upperStmt.startsWith('SCALE') || upperStmt.startsWith('PLACEMENT')) {
-                    inOutline = false;
-                }
-
-                if (inOutline) {
-                    extractCoords(stmt, 'OUTLINE');
-                    continue;
-                }
-
-                // Match pin nodes containing explicit side definitions (TOP, BOTTOM, BOT, T, B)
-                // Handles formats like: "1400, 28100 TN1.1 MANDATORY" or "J3.1 TOP NO_PROBE"
-                const pinRegex = /(-?\d+)\s*[, \t]+\s*(-?\d+)\s+([^\s;]+)?\s*(TOP|BOTTOM|BOT|B|T)\b/gi;
-                let match;
-                let foundMatch = false;
-
-                while ((match = pinRegex.exec(stmt)) !== null) {
-                    foundMatch = true;
-                    let rawSide = match[4].toUpperCase();
-                    let side = (rawSide === 'BOTTOM' || rawSide === 'BOT' || rawSide === 'B') ? 'BOTTOM' : 'TOP';
-                    let pinName = match[3] || 'PIN';
-
-                    boardData.points.push({
-                        x: parseInt(match[1]),
-                        y: parseInt(match[2]),
-                        name: pinName,
-                        side: side
-                    });
-                }
-
-                // Fallback for lines containing coordinates and side information without explicit pin tokens in standard order
-                if (!foundMatch && (upperStmt.includes('TOP') || upperStmt.includes('BOTTOM') || upperStmt.includes('BOT'))) {
-                    const fallbackCoords = stmt.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/g);
-                    if (fallbackCoords) {
-                        let side = (upperStmt.includes('BOTTOM') || upperStmt.includes('BOT')) ? 'BOTTOM' : 'TOP';
-                        for (let coordPair of fallbackCoords) {
-                            let parts = coordPair.split(/[\s,]+/);
-                            if (parts.length >= 2) {
-                                boardData.points.push({
-                                    x: parseInt(parts[0]),
-                                    y: parseInt(parts[1]),
-                                    name: 'PIN',
-                                    side: side
-                                });
-                            }
-                        }
-                    }
-                }
-            }
+            currentNode.pins.push({
+              x,
+              y,
+              side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
+              ref: compRef,
+              rawMeta: meta
+            });
+          }
         }
+      }
+      return nodes;
+    }
 
-        function extractCoords(str, type) {
-            const pairRegex = /(-?\d+)\s*[, \t]+\s*(-?\d+)/g;
-            let match;
-            while ((match = pairRegex.exec(str)) !== null) {
-                let x = parseInt(match[1]);
-                let y = parseInt(match[2]);
-                if (type === 'OUTLINE') {
-                    boardData.outline.push({ x: x, y: y });
-                }
-            }
-        }
+    function calculateBounds(nodes) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let pinCount = 0;
 
-        function calculateCenter() {
-            let allX = [...boardData.outline.map(p => p.x), ...boardData.points.map(p => p.x)];
-            if (allX.length > 0) {
-                let minX = Math.min(...allX);
-                let maxX = Math.max(...allX);
-                boardCenterX = (minX + maxX) / 2;
-            } else {
-                boardCenterX = 0;
-            }
-        }
-
-        function getTransformedX(x) {
-            return (viewModeSelect.value === 'bottom') ? (2 * boardCenterX - x) : x;
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.translate(panX, panY);
-            ctx.scale(scale, scale);
-
-            // Draw Board Outline (Pink)
-            if (chkOutline.checked && boardData.outline.length > 0) {
-                ctx.strokeStyle = '#ff007f';
-                ctx.lineWidth = 2 / scale;
-                ctx.beginPath();
-                
-                let startX = getTransformedX(boardData.outline[0].x);
-                ctx.moveTo(startX, -boardData.outline[0].y);
-
-                for (let i = 1; i < boardData.outline.length; i++) {
-                    let curX = getTransformedX(boardData.outline[i].x);
-                    ctx.lineTo(curX, -boardData.outline[i].y);
-                }
-                ctx.closePath();
-                ctx.stroke();
-            }
-
-            // Draw Nodes / Pins (Cyan = TOP, Yellow = BOTTOM)
-            const pointSize = Math.max(2, 8 / scale);
-            for (let pt of boardData.points) {
-                if (pt.side === 'TOP' && !chkTop.checked) continue;
-                if (pt.side === 'BOTTOM' && !chkBottom.checked) continue;
-
-                ctx.fillStyle = (pt.side === 'TOP') ? '#00ffff' : '#ffb700';
-                let renderX = getTransformedX(pt.x);
-                ctx.fillRect(renderX - pointSize / 2, -pt.y - pointSize / 2, pointSize, pointSize);
-            }
-
-            ctx.restore();
-        }
-
-        function resetZoom() {
-            if (boardData.points.length === 0 && boardData.outline.length === 0) return;
-
-            let allX = [...boardData.outline.map(p => p.x), ...boardData.points.map(p => p.x)];
-            let allY = [...boardData.outline.map(p => -p.y), ...boardData.points.map(p => -p.y)];
-
-            let minX = Math.min(...allX);
-            let maxX = Math.max(...allX);
-            let minY = Math.min(...allY);
-            let maxY = Math.max(...allY);
-
-            let width = maxX - minX || 1;
-            let height = maxY - minY || 1;
-
-            scale = Math.min(canvas.width / width, canvas.height / height) * 0.8;
-            panX = (canvas.width - width * scale) / 2 - minX * scale;
-            panY = (canvas.height - height * scale) / 2 - minY * scale;
-
-            draw();
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX - panX;
-            startY = e.clientY - panY;
+      nodes.forEach(node => {
+        node.pins.forEach(pin => {
+          pinCount++;
+          if (pin.x < minX) minX = pin.x;
+          if (pin.x > maxX) maxX = pin.x;
+          if (pin.y < minY) minY = pin.y;
+          if (pin.y > maxY) maxY = pin.y;
         });
+      });
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                panX = e.clientX - startX;
-                panY = e.clientY - startY;
-                draw();
+      if (minX === Infinity) {
+        minX = 0; maxX = 50000; minY = -10000; maxY = 30000;
+      }
+
+      state.bounds = { minX, maxX, minY, maxY };
+      document.getElementById('statNodes').innerText = nodes.length;
+      document.getElementById('statPins').innerText = pinCount;
+
+      resetView();
+    }
+
+    function resetView() {
+      const margin = 40;
+      const boardWidth = state.bounds.maxX - state.bounds.minX;
+      const boardHeight = state.bounds.maxY - state.bounds.minY;
+
+      if (boardWidth <= 0 || boardHeight <= 0) return;
+
+      const scaleX = (mainCanvas.width - margin * 2) / boardWidth;
+      const scaleY = (mainCanvas.height - margin * 2) / boardHeight;
+      state.transform.scale = Math.min(scaleX, scaleY);
+
+      state.transform.x = margin + (mainCanvas.width - margin * 2 - boardWidth * state.transform.scale) / 2 - state.bounds.minX * state.transform.scale;
+      state.transform.y = margin + (mainCanvas.height - margin * 2 - boardHeight * state.transform.scale) / 2 - state.bounds.minY * state.transform.scale;
+      
+      render();
+    }
+
+    // Process files
+    function processFiles() {
+      const combinedText = state.file1Text + '\n' + state.file2Text;
+      state.nodes = parseBoardXY(combinedText);
+      calculateBounds(state.nodes);
+    }
+
+    document.getElementById('fileInput1').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('file1Status').innerText = file.name;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        state.file1Text = evt.target.result;
+        processFiles();
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('fileInput2').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('file2Status').innerText = file.name;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        state.file2Text = evt.target.result;
+        processFiles();
+      };
+      reader.readAsText(file);
+    });
+
+    // Render Canvas
+    function render() {
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
+
+      // Draw Grid Background
+      drawGrid(mainCtx, mainCanvas.width, mainCanvas.height);
+
+      mainCtx.save();
+      // Apply panning and zooming transform
+      mainCtx.translate(state.transform.x, state.transform.y);
+      mainCtx.scale(state.transform.scale, -state.transform.scale); // Invert Y axis for PCB coords
+
+      // 1. Board Outline
+      if (state.visibility.boardOutline) {
+        mainCtx.strokeStyle = '#10b981';
+        mainCtx.lineWidth = 2 / state.transform.scale;
+        const b = state.bounds;
+        mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
+      }
+
+      // 2. Pins & Component Representations
+      state.nodes.forEach(node => {
+        node.pins.forEach(pin => {
+          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
+          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
+
+          // Filter by side visibility setting
+          if (isTopPin && !state.visibility.topPins) return;
+          if (isBottomPin && !state.visibility.bottomPins) return;
+
+          // Side View Filter
+          if (state.currentSide === 'TOP' && isBottomPin && !isTopPin) return;
+          if (state.currentSide === 'BOTTOM' && isTopPin && !isBottomPin) return;
+
+          // Draw Pin Point
+          mainCtx.beginPath();
+          mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
+          if (isTopPin) {
+            mainCtx.fillStyle = '#38bdf8';
+          } else {
+            mainCtx.fillStyle = '#f43f5e';
+          }
+          mainCtx.fill();
+
+          // Component Outline simulation around labeled pins
+          if (pin.ref) {
+            const isTopComp = isTopPin;
+            if ((isTopComp && state.visibility.topComp) || (!isTopComp && state.visibility.bottomComp)) {
+              mainCtx.strokeStyle = isTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
+              mainCtx.lineWidth = 1 / state.transform.scale;
+              mainCtx.strokeRect(pin.x - 200, pin.y - 200, 400, 400);
             }
+          }
         });
+      });
 
-        canvas.addEventListener('mouseup', () => isDragging = false);
+      mainCtx.restore();
 
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-            scale *= zoomFactor;
-            draw();
+      // Render Overview Map
+      renderOverview();
+    }
+
+    function drawGrid(ctx, width, height) {
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      ctx.beginPath();
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.moveTo(0, y); ctx.lineTo(width, y);
+      }
+      ctx.stroke();
+    }
+
+    // Render Overview Map & Viewport Location Box
+    function renderOverview() {
+      const w = overviewCanvas.width;
+      const h = overviewCanvas.height;
+      overviewCtx.clearRect(0, 0, w, h);
+
+      const b = state.bounds;
+      const boardW = b.maxX - b.minX + 2000;
+      const boardH = b.maxY - b.minY + 2000;
+
+      if (boardW <= 0 || boardH <= 0) return;
+
+      const scale = Math.min(w / boardW, h / boardH);
+      const offsetX = (w - boardW * scale) / 2;
+      const offsetY = (h - boardH * scale) / 2;
+
+      // Draw Mini Board
+      overviewCtx.strokeStyle = '#334155';
+      overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
+
+      // Draw Pins on Mini Map
+      overviewCtx.fillStyle = '#38bdf8';
+      state.nodes.forEach(node => {
+        node.pins.forEach(pin => {
+          const mx = offsetX + (pin.x - b.minX + 1000) * scale;
+          const my = h - (offsetY + (pin.y - b.minY + 1000) * scale);
+          overviewCtx.fillRect(mx, my, 1.5, 1.5);
         });
+      });
 
-        resizeCanvas();
-    </script>
+      // Draw Viewport Box (Where user is currently zoomed)
+      const vpLeft = (-state.transform.x - b.minX + 1000) * (scale / state.transform.scale) + offsetX;
+      const vpTop = (-state.transform.y - b.minY + 1000) * (scale / state.transform.scale) + offsetY;
+      const vpW = mainCanvas.width * (scale / state.transform.scale);
+      const vpH = mainCanvas.height * (scale / state.transform.scale);
+
+      overviewCtx.strokeStyle = '#f59e0b';
+      overviewCtx.lineWidth = 1.5;
+      overviewCtx.strokeRect(vpLeft, vpTop, vpW, vpH);
+      overviewCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+      overviewCtx.fillRect(vpLeft, vpTop, vpW, vpH);
+    }
+
+    // Mouse Interaction (Pan & Zoom)
+    viewport.addEventListener('mousedown', (e) => {
+      state.isDragging = true;
+      state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!state.isDragging) return;
+      state.transform.x = e.clientX - state.dragStart.x;
+      state.transform.y = e.clientY - state.dragStart.y;
+      render();
+    });
+
+    window.addEventListener('mouseup', () => state.isDragging = false);
+
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+
+      const mouseX = e.clientX - viewport.offsetLeft;
+      const mouseY = e.clientY - viewport.offsetTop;
+
+      state.transform.x = mouseX - (mouseX - state.transform.x) * zoomFactor;
+      state.transform.y = mouseY - (mouseY - state.transform.y) * zoomFactor;
+      state.transform.scale *= zoomFactor;
+
+      render();
+    }, { passive: false });
+
+    // UI Event Listeners for View Toggle & Features
+    document.getElementById('btnTopView').addEventListener('click', (e) => {
+      state.currentSide = 'TOP';
+      document.getElementById('btnTopView').classList.add('active');
+      document.getElementById('btnBottomView').classList.remove('active');
+      render();
+    });
+
+    document.getElementById('btnBottomView').addEventListener('click', (e) => {
+      state.currentSide = 'BOTTOM';
+      document.getElementById('btnBottomView').classList.add('active');
+      document.getElementById('btnTopView').classList.remove('active');
+      render();
+    });
+
+    document.getElementById('chkTopPins').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
+    document.getElementById('chkBottomPins').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
+    document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
+    document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
+    document.getElementById('chkBoardOutline').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
+
+    // Initial Layout Setup
+    resizeCanvas();
+  </script>
 </body>
 </html>
