@@ -314,7 +314,6 @@
       file1Text: '',
       file2Text: '',
       nodes: [],
-      outlines: [], // Holds actual board outline primitives
       currentSide: 'TOP', // 'TOP' or 'BOTTOM'
       visibility: {
         topPins: true,
@@ -349,38 +348,20 @@
     // Parse Agilent 3070 board_xy file content
     function parseBoardXY(text) {
       const nodes = [];
-      const outlines = [];
       const lines = text.split('\n');
       let currentNode = null;
-      let inOutlineSection = false;
-      let currentPrimitive = [];
 
       for (let line of lines) {
         line = line.trim();
         if (!line) continue;
 
-        // Parse Outline / Primitives section
-        if (line.includes('PRIMITIVE') || line.includes('OUTLINE') || line.includes('BORDER')) {
-          inOutlineSection = true;
-          currentNode = null;
-          continue;
-        }
-
         if (line.startsWith('NODE')) {
-          inOutlineSection = false;
           const parts = line.split(/\s+/);
           currentNode = {
             name: parts[1] || 'UNKNOWN',
             pins: []
           };
           nodes.push(currentNode);
-        } else if (inOutlineSection) {
-          // Parse outline coordinates: e.g. "1000, 2000; 3000, 2000;" or "POLY ... "
-          const outlineCoords = [...line.matchAll(/(-?\d+),\s*(-?\d+)/g)];
-          if (outlineCoords.length > 0) {
-            const path = outlineCoords.map(m => ({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) }));
-            outlines.push(path);
-          }
         } else if (currentNode) {
           // Parse pin coordinates: e.g. "190, 3050 J3.1 TOP NO_PROBE;"
           const coordMatch = line.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
@@ -398,17 +379,17 @@
             currentNode.pins.push({
               x,
               y,
-              side: isBottom ? 'BOTTOM' : 'TOP',
+              side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
               ref: compRef,
               rawMeta: meta
             });
           }
         }
       }
-      return { nodes, outlines };
+      return nodes;
     }
 
-    function calculateBounds(nodes, outlines) {
+    function calculateBounds(nodes) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       let pinCount = 0;
 
@@ -419,15 +400,6 @@
           if (pin.x > maxX) maxX = pin.x;
           if (pin.y < minY) minY = pin.y;
           if (pin.y > maxY) maxY = pin.y;
-        });
-      });
-
-      outlines.forEach(path => {
-        path.forEach(pt => {
-          if (pt.x < minX) minX = pt.x;
-          if (pt.x > maxX) maxX = pt.x;
-          if (pt.y < minY) minY = pt.y;
-          if (pt.y > maxY) maxY = pt.y;
         });
       });
 
@@ -462,10 +434,8 @@
     // Process files
     function processFiles() {
       const combinedText = state.file1Text + '\n' + state.file2Text;
-      const parsed = parseBoardXY(combinedText);
-      state.nodes = parsed.nodes;
-      state.outlines = parsed.outlines;
-      calculateBounds(state.nodes, state.outlines);
+      state.nodes = parseBoardXY(combinedText);
+      calculateBounds(state.nodes);
     }
 
     document.getElementById('fileInput1').addEventListener('change', (e) => {
@@ -515,26 +485,12 @@
         mainCtx.scale(state.transform.scale, flipY * state.transform.scale);
       }
 
-      // 1. True Board Outline Drawing from PRIMITIVE
+      // 1. Board Outline
       if (state.visibility.boardOutline) {
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
-
-        if (state.outlines.length > 0) {
-          state.outlines.forEach(path => {
-            if (path.length < 2) return;
-            mainCtx.beginPath();
-            mainCtx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-              mainCtx.lineTo(path[i].x, path[i].y);
-            }
-            mainCtx.stroke();
-          });
-        } else {
-          // Fallback box outline if no PRIMITIVE outline block present
-          const b = state.bounds;
-          mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
-        }
+        const b = state.bounds;
+        mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
       }
 
       // 2. Pins & Component Representations
@@ -542,25 +498,27 @@
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP';
           const isBottomPin = pin.side === 'BOTTOM';
+          const isBothPin = pin.side === 'BOTH';
 
-          // Independent Pin Visibility checks
+          // Check Pin Visibility
           if (isTopPin && !state.visibility.topPins) return;
           if (isBottomPin && !state.visibility.bottomPins) return;
+          if (isBothPin && !state.visibility.topPins && !state.visibility.bottomPins) return;
 
-          // Draw Pin Point (Top Pin = Blue, Bottom Pin = Red ALWAYS)
+          // Draw Pin Point
           mainCtx.beginPath();
           mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
-          if (isTopPin) {
-            mainCtx.fillStyle = '#38bdf8'; // Blue
+          if (isTopPin || (isBothPin && state.currentSide === 'TOP')) {
+            mainCtx.fillStyle = '#38bdf8';
           } else {
-            mainCtx.fillStyle = '#f43f5e'; // Red
+            mainCtx.fillStyle = '#f43f5e';
           }
           mainCtx.fill();
 
           // Component Outline simulation
           if (pin.ref) {
-            const showTopComp = isTopPin && state.visibility.topComp;
-            const showBottomComp = isBottomPin && state.visibility.bottomComp;
+            const showTopComp = (isTopPin || isBothPin) && state.visibility.topComp;
+            const showBottomComp = (isBottomPin || isBothPin) && state.visibility.bottomComp;
 
             if (showTopComp || showBottomComp) {
               mainCtx.strokeStyle = showTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
@@ -612,11 +570,11 @@
       overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
 
       // Draw Pins on Mini Map
+      overviewCtx.fillStyle = '#38bdf8';
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const mx = offsetX + (pin.x - b.minX + 1000) * scale;
           const my = h - (offsetY + (pin.y - b.minY + 1000) * scale);
-          overviewCtx.fillStyle = (pin.side === 'TOP') ? '#38bdf8' : '#f43f5e';
           overviewCtx.fillRect(mx, my, 1.5, 1.5);
         });
       });
