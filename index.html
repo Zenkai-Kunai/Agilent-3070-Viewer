@@ -3,268 +3,322 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent 3070 Board Graphic Viewer</title>
+    <title>Agilent Board Graphics Viewer (ICT 3070)</title>
     <style>
-        * { box-sizing: border-box; font-family: "Courier New", Courier, monospace; }
-        body { margin: 0; padding: 0; background-color: #808080; color: #000; height: 100vh; display: flex; flex-direction: column; }
+        * { box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #c0c0c0; color: #000; font-size: 11px; padding: 4px; user-select: none; }
         
-        /* Classic Motif/Unix Header Bar */
-        .header-bar {
-            background-color: #990033; color: white; padding: 4px 10px; font-weight: bold;
-            display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #404040;
-        }
+        /* Agilent Classic UI Layout */
+        .window { border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040; background: #c0c0c0; padding: 4px; }
+        .menubar { background: #000080; color: white; padding: 2px 6px; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .menubar-file { cursor: pointer; text-decoration: underline; background: #c0c0c0; color: black; border: 1px solid #808080; padding: 1px 6px; }
         
-        .controls-bar {
-            background-color: #c0c0c0; padding: 6px; border-bottom: 2px solid #808080;
-            display: flex; gap: 10px; align-items: center;
-        }
-
-        .btn {
-            background-color: #d4d0c8; border: 2px outset #ffffff; color: black;
-            padding: 2px 8px; font-weight: bold; cursor: pointer; font-size: 12px;
-        }
-        .btn:active { border-style: inset; }
-
-        .main-container { display: flex; flex: 1; overflow: hidden; background-color: #c0c0c0; border: 2px inset #ffffff; }
-
-        /* Left Device Selection Panel */
-        .sidebar {
-            width: 200px; background-color: #d4d0c8; border-right: 2px solid #808080;
-            display: flex; flex-direction: column;
-        }
-        .sidebar-title { background-color: #800000; color: white; padding: 2px 5px; font-size: 11px; font-weight: bold; }
-        .device-list { flex: 1; overflow-y: scroll; background-color: #ffffff; border: 1px solid #808080; margin: 4px; }
-        .device-item { padding: 2px 4px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-        .device-item:hover { background-color: #000080; color: white; }
-        .device-item.selected { background-color: #000080; color: white; }
-
-        /* Center Viewer Frame */
-        .viewer-frame { flex: 1; display: flex; flex-direction: column; background-color: #000000; position: relative; }
-        .viewer-title { background-color: #990033; color: white; text-align: center; font-size: 12px; font-weight: bold; padding: 2px; }
+        .top-panel { display: flex; gap: 6px; margin-bottom: 4px; }
+        .notes-box { flex: 2; border: 1px solid #808080; background: #e0e0e0; padding: 4px; }
+        .notes-title { font-weight: bold; margin-bottom: 2px; }
+        #notes-content { width: 100%; height: 75px; background: #ffffff; border: 1px solid #707070; font-family: monospace; font-size: 11px; padding: 4px; overflow-y: auto; white-space: pre-wrap; }
         
-        canvas { flex: 1; width: 100%; height: 100%; display: block; background-color: #000000; cursor: crosshair; }
+        .features-box { flex: 1.5; border: 1px solid #808080; background: #c0c0c0; padding: 4px; display: grid; grid-template-columns: 1fr 40px 40px; align-items: center; gap: 2px; }
+        .features-box header { font-weight: bold; grid-column: 1 / -1; margin-bottom: 2px; }
+        .features-box label { font-size: 10px; }
+        
+        .controls-box { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; align-content: start; }
+        button { background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040; padding: 3px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        button:active { border: 2px solid #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; }
 
-        .status-bar { background-color: #c0c0c0; border-top: 2px solid #808080; padding: 2px 10px; font-size: 11px; display: flex; justify-content: space-between; }
+        .main-workspace { display: flex; gap: 4px; height: calc(100vh - 145px); }
+        .no-xy-sidebar { width: 160px; background: #000000; border: 1px solid #707070; color: #00ff00; font-family: monospace; padding: 4px; display: flex; flex-direction: column; }
+        .no-xy-sidebar header { color: #ffffff; font-family: sans-serif; font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 4px; border-bottom: 1px solid #404040; padding-bottom: 2px; }
+        #no-xy-list { flex: 1; overflow-y: auto; font-size: 10px; }
+        
+        .canvas-container { flex: 1; display: flex; flex-direction: column; background: #000; border: 1px solid #707070; position: relative; }
+        .canvas-header { background: #800040; color: #ffffff; text-align: center; font-weight: bold; padding: 2px; font-size: 11px; }
+        canvas { flex: 1; width: 100%; height: 100%; cursor: crosshair; display: block; }
+        
+        #file-input { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="header-bar">
-        <span>Detailed View - Agilent 3070 Graphic Viewer</span>
-        <span id="cursor-pos">Cursor: 0, 0 Tenth Mils</span>
+<div class="window">
+    <div class="menubar">
+        <span>Agilent Board Graphics Viewer (HTML5 Web Edition)</span>
+        <label for="file-input" class="menubar-file">Open Board File...</label>
+        <input type="file" id="file-input" />
     </div>
 
-    <div class="controls-bar">
-        <label for="folder-input" class="btn">Choose Folder</label>
-        <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none;" />
-
-        <label for="file-input" class="btn">Choose CAD/Board File</label>
-        <input type="file" id="file-input" accept=".txt,.board,.xy,.csv" style="display:none;" />
-
-        <button class="btn" onclick="resetView()">Fit Screen</button>
-        <span id="loaded-file" style="font-size: 12px; color: #333;">No file loaded</span>
-    </div>
-
-    <div class="main-container">
-        <!-- Devices X-Y List Panel -->
-        <div class="sidebar">
-            <div class="sidebar-title">Devices with X-Y data:</div>
-            <div class="device-list" id="device-list">
-                <!-- Device entries appear here -->
-            </div>
+    <div class="top-panel">
+        <div class="notes-box">
+            <div class="notes-title">Status: <span id="status-text" style="color: green;">Ready</span></div>
+            <div id="notes-content">Select or open an Agilent 'board' file to begin rendering...</div>
         </div>
 
-        <!-- Canvas Viewport -->
-        <div class="viewer-frame">
-            <div class="viewer-title">Detailed View</div>
-            <canvas id="board-canvas"></canvas>
+        <div class="features-box">
+            <header>Features Shown:</header>
+            <label><input type="checkbox" id="chk-outlines" checked> Outlines</label>
+            <span style="text-align:center; font-weight:bold;">Bottom</span>
+            <span style="text-align:center; font-weight:bold;">Top</span>
+
+            <label>X-Y Locations:</label>
+            <input type="checkbox" id="chk-bot-xy" checked style="justify-self: center;">
+            <input type="checkbox" id="chk-top-xy" checked style="justify-self: center;">
+
+            <label>Device Outlines:</label>
+            <input type="checkbox" id="chk-bot-dev" checked style="justify-self: center;">
+            <input type="checkbox" id="chk-top-dev" checked style="justify-self: center;">
+        </div>
+
+        <div class="controls-box">
+            <button id="btn-full">Full View</button>
+            <button id="btn-redraw">Redraw</button>
+            <button id="btn-zoomin">Zoom In</button>
+            <button id="btn-zoomout">Zoom Out</button>
         </div>
     </div>
 
-    <div class="status-bar">
-        <span>Units: Tenth Mils</span>
-        <span id="node-count">Pads: 0</span>
+    <div class="main-workspace">
+        <div class="no-xy-sidebar">
+            <header>Devices with<br>no X-Y data:</header>
+            <div id="no-xy-list"></div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-header">Detailed View</div>
+            <canvas id="boardCanvas"></canvas>
+        </div>
     </div>
+</div>
 
-    <script>
-        const canvas = document.getElementById('board-canvas');
-        const ctx = canvas.getContext('2d');
-        const deviceListEl = document.getElementById('device-list');
-        const cursorPosEl = document.getElementById('cursor-pos');
-        const loadedFileEl = document.getElementById('loaded-file');
-        const nodeCountEl = document.getElementById('node-count');
+<script>
+    const canvas = document.getElementById('boardCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Dataset Containers
+    let boardOutlines = [];
+    let devices = {};
+    let pins = [];
+    let noXyDevices = [];
 
-        let components = [];
-        let zoom = 1;
-        let panX = 0, panY = 0;
-        let selectedDevice = null;
+    // Viewport State
+    let scale = 0.05;
+    let offsetX = 100;
+    let offsetY = 100;
+    let isPanning = false;
+    let startX, startY;
 
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight - 20; // Adjust for title
-            draw();
-        }
-        window.addEventListener('resize', resizeCanvas);
+    // Canvas Resize Handling
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight - 20;
+        redraw();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-        // Generate synthetic grid structures matching Agilent 3070 CAD output if sample file is parsed
-        function generateSampleData() {
-            components = [];
-            const prefixes = ['%r1_2', '%cr3_4', '%xcr1_2', '%xcr3_4', '%r8_7', '%r10_9', '%p1_2', '%p1_3', '%p2_3', '%jp1_8', '%jp2_7'];
-            
-            // Generate grid BGA/IC components similar to photo
-            const layoutMap = [
-                { name: 'U1_BGA', x: 200, y: 300, rows: 16, cols: 16, pitch: 12, size: 8 },
-                { name: 'U2_BGA', x: 700, y: 300, rows: 16, cols: 16, pitch: 12, size: 8 },
-                { name: 'U3_QFP', x: 500, y: 500, rows: 6, cols: 6, pitch: 15, size: 10 },
-                { name: 'U4_SIP', x: 400, y: 200, rows: 8, cols: 2, pitch: 12, size: 8 }
-            ];
+    // File Reader & Parsing Logic
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-            layoutMap.forEach(ic => {
-                let pads = [];
-                for (let r = 0; r < ic.rows; r++) {
-                    for (let c = 0; c < ic.cols; c++) {
-                        pads.push({
-                            x: ic.x + (c * ic.pitch),
-                            y: ic.y + (r * ic.pitch),
-                            w: ic.size,
-                            h: ic.size,
-                            highlight: (r === 7 && c === 15) || (r === 10 && c === 4) // Highlighted test pin active nodes
-                        });
-                    }
-                }
-                components.push({ name: ic.name, pads: pads });
-            });
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            parseAgilentBoard(evt.target.result);
+            document.getElementById('status-text').innerText = `Loaded '${file.name}'`;
+            zoomFull();
+        };
+        reader.readAsText(file);
+    });
 
-            // Add discrete test devices
-            prefixes.forEach((pref, idx) => {
-                components.push({
-                    name: pref,
-                    pads: [
-                        { x: 100 + (idx * 20), y: 100 + (idx * 15), w: 10, h: 10, highlight: false },
-                        { x: 115 + (idx * 20), y: 100 + (idx * 15), w: 10, h: 10, highlight: false }
-                    ]
-                });
-            });
+    function parseAgilentBoard(text) {
+        boardOutlines = [];
+        devices = {};
+        pins = [];
+        noXyDevices = [];
 
-            populateSidebar();
-            resetView();
+        // 1. Boundary / Outline Parsing
+        const boundaryRegex = /boundary\s+([^\r\n]+)/gi;
+        let match;
+        while ((match = boundaryRegex.exec(text)) !== null) {
+            const coords = match[1].trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
+            if (coords.length >= 4) boardOutlines.push(coords);
         }
 
-        function populateSidebar() {
-            deviceListEl.innerHTML = '';
-            components.forEach(comp => {
-                const item = document.createElement('div');
-                item.className = 'device-item';
-                item.textContent = comp.name;
-                item.onclick = () => {
-                    document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
-                    item.classList.add('selected');
-                    selectedDevice = comp.name;
-                    draw();
+        // 2. Devices and Pins Parsing
+        const devRegex = /device\s+["']?([^"'\s]+)["']?\s*\{([^}]+)\}/gi;
+        while ((match = devRegex.exec(text)) !== null) {
+            const devId = match[1];
+            const block = match[2];
+            const side = /side\s+bottom/i.test(block) ? 'B' : 'T';
+
+            const pinRegex = /pin\s+["']?([^"'\s]+)["']?\s+(-?\d+)\s+(-?\d+)\s+([^\r\n]+)/gi;
+            let pMatch;
+            let devPins = [];
+
+            while ((pMatch = pinRegex.exec(block)) !== null) {
+                const pInfo = {
+                    id: pMatch[1],
+                    x: parseFloat(pMatch[2]),
+                    y: parseFloat(pMatch[3]),
+                    side: side,
+                    node: pMatch[4].trim(),
+                    dev: devId
                 };
-                deviceListEl.appendChild(item);
-            });
-            nodeCountEl.textContent = `Pads: ${components.reduce((acc, c) => acc + c.pads.length, 0)}`;
+                pins.push(pInfo);
+                devPins.push(pInfo);
+            }
+
+            if (devPins.length > 0) {
+                const xs = devPins.map(p => p.x);
+                const ys = devPins.map(p => p.y);
+                devices[devId] = {
+                    side: side,
+                    bbox: [Math.min(...xs) - 800, Math.min(...ys) - 800, Math.max(...xs) + 800, Math.max(...ys) + 800],
+                    pins: devPins
+                };
+            } else {
+                noXyDevices.push(devId);
+            }
         }
 
-        function draw() {
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Populate No-XY Listbox
+        const listContainer = document.getElementById('no-xy-list');
+        listContainer.innerHTML = noXyDevices.map(d => `<div>${d}</div>`).join('');
+    }
 
-            ctx.save();
-            ctx.translate(panX, panY);
-            ctx.scale(zoom, zoom);
+    // Coordinate Conversion
+    function worldToScreen(wx, wy) {
+        const sx = (wx * scale) + offsetX;
+        const sy = canvas.height - ((wy * scale) + offsetY);
+        return { x: sx, y: sy };
+    }
 
-            components.forEach(comp => {
-                const isSelected = comp.name === selectedDevice;
-                
-                comp.pads.forEach(pad => {
-                    if (pad.highlight) {
-                        ctx.fillStyle = '#ffffff'; // White active pin high-density node
-                    } else if (isSelected) {
-                        ctx.fillStyle = '#ffff00'; // Yellow selected component pin
-                    } else {
-                        ctx.fillStyle = '#000000';
-                        ctx.strokeStyle = '#66ccff'; // Cyan outlines (Agilent vector format)
-                        ctx.lineWidth = 1 / zoom;
-                    }
+    function screenToWorld(sx, sy) {
+        const wx = (sx - offsetX) / scale;
+        const wy = (canvas.height - sy - offsetY) / scale;
+        return { x: wx, y: wy };
+    }
 
-                    if (pad.highlight || isSelected) {
-                        ctx.fillRect(pad.x, pad.y, pad.w, pad.h);
-                    } else {
-                        ctx.strokeRect(pad.x, pad.y, pad.w, pad.h);
-                    }
-                });
-            });
+    // Main Canvas Redraw
+    function redraw() {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.restore();
-        }
+        const showOutlines = document.getElementById('chk-outlines').checked;
+        const showTopDev = document.getElementById('chk-top-dev').checked;
+        const showBotDev = document.getElementById('chk-bot-dev').checked;
+        const showTopXY = document.getElementById('chk-top-xy').checked;
+        const showBotXY = document.getElementById('chk-bot-xy').checked;
 
-        // Parse custom 3070 board file layout (Device X Y / Pad Coordinates)
-        function parseBoardFile(text) {
-            const lines = text.split('\n');
-            components = [];
-            let currentComp = null;
-
-            lines.forEach(line => {
-                const parts = line.trim().split(/\s+/);
-                if (parts.length >= 3) {
-                    const name = parts[0];
-                    const x = parseFloat(parts[1]);
-                    const y = parseFloat(parts[2]);
-
-                    if (!isNaN(x) && !isNaN(y)) {
-                        components.push({
-                            name: name,
-                            pads: [{ x: x, y: y, w: 10, h: 10, highlight: false }]
-                        });
-                    }
+        // 1. Draw Outlines
+        if (showOutlines) {
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 1.5;
+            boardOutlines.forEach(line => {
+                ctx.beginPath();
+                for (let i = 0; i < line.length - 1; i += 2) {
+                    const p = worldToScreen(line[i], line[i+1]);
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
                 }
+                ctx.stroke();
             });
-
-            populateSidebar();
-            resetView();
         }
 
-        function resetView() {
-            zoom = 1.2;
-            panX = 50;
-            panY = 50;
-            draw();
-        }
-
-        // Mouse interactions for panning/zooming and position tracking
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = Math.round((e.clientX - rect.left - panX) / zoom * 10);
-            const mouseY = Math.round((e.clientY - rect.top - panY) / zoom * 10);
-            cursorPosEl.textContent = `Cursor: ${mouseX}, ${mouseY} Tenth Mils`;
-        });
-
-        // File Select Handlers
-        document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            loadedFileEl.textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = (evt) => parseBoardFile(evt.target.result);
-            reader.readAsText(file);
-        });
-
-        document.getElementById('folder-input').addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            const boardFile = files.find(f => f.name.includes('board') || f.name.endsWith('.xy') || f.name.endsWith('.txt'));
-            if (boardFile) {
-                loadedFileEl.textContent = boardFile.name;
-                const reader = new FileReader();
-                reader.onload = (evt) => parseBoardFile(evt.target.result);
-                reader.readAsText(boardFile);
+        // 2. Draw Device Outlines
+        Object.keys(devices).forEach(devId => {
+            const dev = devices[devId];
+            if ((dev.side === 'T' && showTopDev) || (dev.side === 'B' && showBotDev)) {
+                ctx.strokeStyle = dev.side === 'T' ? '#55ffff' : '#ffaa00';
+                ctx.lineWidth = 1;
+                const p1 = worldToScreen(dev.bbox[0], dev.bbox[1]);
+                const p2 = worldToScreen(dev.bbox[2], dev.bbox[3]);
+                ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
             }
         });
 
-        // Initialize default sample view matching screenshot
-        resizeCanvas();
-        generateSampleData();
-    </script>
+        // 3. Draw Pins / X-Y Locations
+        pins.forEach(p => {
+            if ((p.side === 'T' && showTopXY) || (p.side === 'B' && showBotXY)) {
+                ctx.fillStyle = p.side === 'T' ? '#ffffff' : '#ffff00';
+                const pt = worldToScreen(p.x, p.y);
+                ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
+            }
+        });
+    }
+
+    // Hit Testing & Notes Output
+    canvas.addEventListener('click', function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const world = screenToWorld(mouseX, mouseY);
+
+        // Pin Search Threshold (Tenth-Mils)
+        const hitRadius = 150 / scale;
+        const clickedPin = pins.find(p => Math.abs(p.x - world.x) < hitRadius && Math.abs(p.y - world.y) < hitRadius);
+
+        const notes = document.getElementById('notes-content');
+        if (clickedPin) {
+            notes.innerText = `SELECTED PIN:\nDevice: ${clickedPin.dev}\nPin No: ${clickedPin.id}\nNode/Net: ${clickedPin.node}\nSide: ${clickedPin.side === 'T' ? 'Top' : 'Bottom'}\nX-Y: (${Math.round(clickedPin.x)}, ${Math.round(clickedPin.y)}) Tenth-Mils`;
+            return;
+        }
+
+        // Device Search
+        const clickedDevKey = Object.keys(devices).find(key => {
+            const b = devices[key].bbox;
+            return world.x >= b[0] && world.x <= b[2] && world.y >= b[1] && world.y <= b[3];
+        });
+
+        if (clickedDevKey) {
+            const dev = devices[clickedDevKey];
+            notes.innerText = `SELECTED DEVICE:\nDevice ID: ${clickedDevKey}\nSide: ${dev.side === 'T' ? 'Top' : 'Bottom'}\nTotal Pins: ${dev.pins.length}\nBBox: [${Math.round(dev.bbox[0])}, ${Math.round(dev.bbox[1])}, ${Math.round(dev.bbox[2])}, ${Math.round(dev.bbox[3])}]`;
+            return;
+        }
+
+        notes.innerText = `Location Clicked:\nX: ${Math.round(world.x)}, Y: ${Math.round(world.y)} Tenth-Mils`;
+    });
+
+    // View Controls
+    function zoomFull() {
+        if (pins.length === 0) return;
+        const xs = pins.map(p => p.x);
+        const ys = pins.map(p => p.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs);
+        const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+        const bw = (maxX - minX) || 1;
+        const bh = (maxY - minY) || 1;
+
+        scale = Math.min(canvas.width / bw, canvas.height / bh) * 0.85;
+        offsetX = (canvas.width - (bw * scale)) / 2 - (minX * scale);
+        offsetY = (canvas.height - (bh * scale)) / 2 - (minY * scale);
+        redraw();
+    }
+
+    document.getElementById('btn-full').addEventListener('click', zoomFull);
+    document.getElementById('btn-redraw').addEventListener('click', redraw);
+    document.getElementById('btn-zoomin').addEventListener('click', () => { scale *= 1.25; redraw(); });
+    document.getElementById('btn-zoomout').addEventListener('click', () => { scale /= 1.25; redraw(); });
+
+    ['chk-outlines', 'chk-bot-xy', 'chk-top-xy', 'chk-bot-dev', 'chk-top-dev'].forEach(id => {
+        document.getElementById(id).addEventListener('change', redraw);
+    });
+
+    // Mouse Pan Controls
+    canvas.addEventListener('mousedown', e => { if (e.button === 2 || e.button === 0) { isPanning = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; } });
+    canvas.addEventListener('mousemove', e => { if (isPanning) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; redraw(); } });
+    canvas.addEventListener('mouseup', () => isPanning = false);
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Wheel Zoom Controls
+    canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+        scale *= zoomFactor;
+        redraw();
+    });
+
+    // Initialize layout dimensions on load
+    resizeCanvas();
+</script>
 </body>
 </html>
