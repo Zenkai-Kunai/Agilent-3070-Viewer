@@ -3,207 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agilent Board Graphics Viewer (ICT 3070)</title>
-    <!-- JSZip CDN with cross-origin safeguards for GitHub Pages -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Agilent 3070 Minimalist Board Viewer</title>
     <style>
-        * { box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-        body { background-color: #c0c0c0; color: #000; font-size: 11px; padding: 4px; user-select: none; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; margin: 0; padding: 0; }
+        body { background-color: #1a1a1a; color: #cccccc; font-size: 12px; height: 100vh; display: flex; flex-direction: column; padding: 8px; gap: 8px; }
         
-        /* Agilent Classic UI Layout */
-        .window { border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040; background: #c0c0c0; padding: 4px; }
-        .menubar { background: #000080; color: white; padding: 2px 6px; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .menubar-file { cursor: pointer; text-decoration: underline; background: #c0c0c0; color: black; border: 1px solid #808080; padding: 1px 6px; }
+        .toolbar { background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 4px; padding: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .file-btn { background: #0066cc; color: #ffffff; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; border: none; }
+        .file-btn:hover { background: #0052a3; }
         
-        .top-panel { display: flex; gap: 6px; margin-bottom: 4px; }
-        .notes-box { flex: 2; border: 1px solid #808080; background: #e0e0e0; padding: 4px; }
-        .notes-title { font-weight: bold; margin-bottom: 2px; }
-        #notes-content { width: 100%; height: 85px; background: #ffffff; border: 1px solid #707070; font-family: monospace; font-size: 11px; padding: 4px; overflow-y: auto; white-space: pre-wrap; }
-        
-        .features-box { flex: 1.5; border: 1px solid #808080; background: #c0c0c0; padding: 4px; display: grid; grid-template-columns: 1fr 40px 40px; align-items: center; gap: 2px; }
-        .features-box header { font-weight: bold; grid-column: 1 / -1; margin-bottom: 2px; }
-        .features-box label { font-size: 10px; }
-        
-        .controls-box { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; align-content: start; }
-        button { background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040; padding: 3px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        button:active { border: 2px solid #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; }
+        .controls { display: flex; gap: 12px; align-items: center; }
+        .controls label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        button.action-btn { background: #3a3a3a; color: #ffffff; border: 1px solid #555555; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
+        button.action-btn:hover { background: #4a4a4a; }
 
-        .main-workspace { display: flex; gap: 4px; height: calc(100vh - 155px); }
-        .no-xy-sidebar { width: 160px; background: #000000; border: 1px solid #707070; color: #00ff00; font-family: monospace; padding: 4px; display: flex; flex-direction: column; }
-        .no-xy-sidebar header { color: #ffffff; font-family: sans-serif; font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 4px; border-bottom: 1px solid #404040; padding-bottom: 2px; }
-        #no-xy-list { flex: 1; overflow-y: auto; font-size: 10px; }
+        .workspace { flex: 1; display: flex; gap: 8px; min-height: 0; }
+        .sidebar { width: 220px; background: #242424; border: 1px solid #3a3a3a; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar h4 { color: #888888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #3a3a3a; padding-bottom: 4px; }
+        .info-box { flex: 1; background: #121212; border: 1px solid #222222; border-radius: 3px; padding: 8px; font-family: monospace; font-size: 11px; color: #33ff33; white-space: pre-wrap; overflow-y: auto; }
         
-        .canvas-container { flex: 1; display: flex; flex-direction: column; background: #000; border: 1px solid #707070; position: relative; }
-        .canvas-header { background: #800040; color: #ffffff; text-align: center; font-weight: bold; padding: 2px; font-size: 11px; }
-        canvas { flex: 1; width: 100%; height: 100%; cursor: crosshair; display: block; }
-        
+        .canvas-area { flex: 1; background: #000000; border: 1px solid #3a3a3a; border-radius: 4px; position: relative; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
         #file-input { display: none; }
     </style>
 </head>
 <body>
 
-<div class="window">
-    <div class="menubar">
-        <span>Agilent Board Graphics Viewer (HTML5 Web Edition)</span>
-        <label for="file-input" class="menubar-file">Open Board or ZIP File...</label>
-        <input type="file" id="file-input" accept=".zip, .board, application/zip, application/x-zip-compressed, *" />
+<div class="toolbar">
+    <label for="file-input" class="file-btn">📁 Open 'board' File</label>
+    <input type="file" id="file-input" accept="*" />
+
+    <div class="controls">
+        <label><input type="checkbox" id="chk-outline" checked> Board Outline</label>
+        <label><input type="checkbox" id="chk-top" checked> <span style="color:#00ffff;">Top Components</span></label>
+        <label><input type="checkbox" id="chk-bot" checked> <span style="color:#ffaa00;">Bottom Components</span></label>
+        <label><input type="checkbox" id="chk-pins" checked> Pin Locations</label>
+        <button class="action-btn" id="btn-reset">Reset View</button>
+    </div>
+</div>
+
+<div class="workspace">
+    <div class="sidebar">
+        <h4>System Log</h4>
+        <div id="log-box" class="info-box">Ready. Load a raw Agilent 'board' file...</div>
+        <h4>Selected Inspector</h4>
+        <div id="inspector-box" class="info-box" style="color: #ffffff;">Click on any component or pin on the canvas.</div>
     </div>
 
-    <div class="top-panel">
-        <div class="notes-box">
-            <div class="notes-title">Status: <span id="status-text" style="color: green;">Ready</span></div>
-            <div id="notes-content">Select or open an Agilent 'board' or ZIP file to begin rendering...</div>
-        </div>
-
-        <div class="features-box">
-            <header>Features Shown:</header>
-            <label><input type="checkbox" id="chk-outlines" checked> Outlines</label>
-            <span style="text-align:center; font-weight:bold;">Bottom</span>
-            <span style="text-align:center; font-weight:bold;">Top</span>
-
-            <label>X-Y Locations:</label>
-            <input type="checkbox" id="chk-bot-xy" checked style="justify-self: center;">
-            <input type="checkbox" id="chk-top-xy" checked style="justify-self: center;">
-
-            <label>Device Outlines:</label>
-            <input type="checkbox" id="chk-bot-dev" checked style="justify-self: center;">
-            <input type="checkbox" id="chk-top-dev" checked style="justify-self: center;">
-        </div>
-
-        <div class="controls-box">
-            <button id="btn-full">Full View</button>
-            <button id="btn-redraw">Redraw</button>
-            <button id="btn-zoomin">Zoom In</button>
-            <button id="btn-zoomout">Zoom Out</button>
-        </div>
-    </div>
-
-    <div class="main-workspace">
-        <div class="no-xy-sidebar">
-            <header>Devices with<br>no X-Y data:</header>
-            <div id="no-xy-list"></div>
-        </div>
-
-        <div class="canvas-container">
-            <div class="canvas-header">Detailed View</div>
-            <canvas id="boardCanvas"></canvas>
-        </div>
+    <div class="canvas-area">
+        <canvas id="boardCanvas"></canvas>
     </div>
 </div>
 
 <script>
-    let canvas, ctx, notesEl, statusEl;
+    let canvas, ctx;
+    let logEl, inspectorEl;
 
-    // Dataset Containers
+    // Parsed Graphics Data
     let boardOutlines = [];
-    let devices = {};
+    let devices = [];
     let pins = [];
-    let noXyDevices = [];
 
     // Viewport State
-    let scale = 0.05;
-    let offsetX = 100;
-    let offsetY = 100;
-    let isPanning = false;
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
     let startX, startY;
-
-    function resizeCanvas() {
-        if (!canvas) return;
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight - 20;
-        redraw();
-    }
 
     window.addEventListener('DOMContentLoaded', () => {
         canvas = document.getElementById('boardCanvas');
         ctx = canvas.getContext('2d');
-        notesEl = document.getElementById('notes-content');
-        statusEl = document.getElementById('status-text');
+        logEl = document.getElementById('log-box');
+        inspectorEl = document.getElementById('inspector-box');
 
-        window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-        const fileInput = document.getElementById('file-input');
-        
-        fileInput.addEventListener('change', async function(e) {
+        // Direct File Loader
+        document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
-            // Reset input value so selecting the same file again triggers change event
-            e.target.value = '';
-
             if (!file) return;
 
-            console.log("Processing File:", file.name);
-            const fileName = file.name.toLowerCase();
-
-            if (fileName.endsWith('.zip')) {
-                if (typeof JSZip === 'undefined') {
-                    alert('JSZip library is blocked or not loaded. Check internet/CDN access.');
-                    statusEl.innerText = 'Error: JSZip missing';
-                    return;
-                }
-
-                statusEl.innerText = `Extracting '${file.name}'...`;
-                try {
-                    const zip = await JSZip.loadAsync(file);
-                    const fileList = Object.keys(zip.files).filter(name => !zip.files[name].dir);
-
-                    console.log("ZIP Contents:", fileList);
-                    notesEl.innerText = `ZIP contents (${fileList.length} files):\n` + fileList.join('\n') + '\n\nSearching for board file...';
-
-                    // Priority search ignoring parent directory paths
-                    let targetFileName = fileList.find(name => {
-                        const cleanName = name.split('/').pop().toLowerCase();
-                        return cleanName === 'board' || cleanName.endsWith('.board') || cleanName.includes('board');
-                    });
-
-                    // Fallback search to any valid text file inside
-                    if (!targetFileName) {
-                        targetFileName = fileList.find(name => {
-                            const cleanName = name.split('/').pop();
-                            return !cleanName.startsWith('.') && !name.includes('__MACOSX');
-                        });
-                    }
-
-                    if (!targetFileName) {
-                        notesEl.innerText += '\n[ERROR] No suitable target file found inside ZIP.';
-                        statusEl.innerText = 'ZIP Parsing Error';
-                        return;
-                    }
-
-                    notesEl.innerText += `\nSelected File: '${targetFileName}'`;
-                    const text = await zip.file(targetFileName).async('string');
-                    parseAgilentBoard(text);
-                    statusEl.innerText = `Loaded '${targetFileName}' from '${file.name}'`;
-                    zoomFull();
-                } catch (err) {
-                    console.error("ZIP Error:", err);
-                    notesEl.innerText = `Error reading ZIP archive:\n${err.message}`;
-                    statusEl.innerText = 'ZIP Read Failed';
-                }
-            } else {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    parseAgilentBoard(evt.target.result);
-                    statusEl.innerText = `Loaded '${file.name}'`;
-                    zoomFull();
-                };
-                reader.readAsText(file);
-            }
+            logEl.innerText = `Loading '${file.name}'...\n`;
+            
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                parseAgilentBoard(evt.target.result);
+                zoomFit();
+            };
+            reader.readAsText(file);
+            e.target.value = ''; 
         });
 
-        // Event Control Registrations
-        document.getElementById('btn-full').addEventListener('click', zoomFull);
-        document.getElementById('btn-redraw').addEventListener('click', redraw);
-        document.getElementById('btn-zoomin').addEventListener('click', () => { scale *= 1.25; redraw(); });
-        document.getElementById('btn-zoomout').addEventListener('click', () => { scale /= 1.25; redraw(); });
-
-        ['chk-outlines', 'chk-bot-xy', 'chk-top-xy', 'chk-bot-dev', 'chk-top-dev'].forEach(id => {
+        // View Controls
+        document.getElementById('btn-reset').addEventListener('click', zoomFit);
+        ['chk-outline', 'chk-top', 'chk-bot', 'chk-pins'].forEach(id => {
             document.getElementById(id).addEventListener('change', redraw);
         });
 
-        canvas.addEventListener('mousedown', e => { if (e.button === 2 || e.button === 0) { isPanning = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; } });
-        canvas.addEventListener('mousemove', e => { if (isPanning) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; redraw(); } });
-        canvas.addEventListener('mouseup', () => isPanning = false);
+        // Canvas Controls
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0 || e.button === 2) {
+                isDragging = true;
+                startX = e.clientX - panX;
+                startY = e.clientY - panY;
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging) {
+                panX = e.clientX - startX;
+                panY = e.clientY - startY;
+                redraw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
         canvas.addEventListener('wheel', e => {
@@ -212,27 +128,37 @@
             scale *= zoomFactor;
             redraw();
         });
+
+        canvas.addEventListener('click', handleCanvasClick);
     });
 
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        redraw();
+    }
+
+    // Direct Agilent Board Parser
     function parseAgilentBoard(text) {
         boardOutlines = [];
-        devices = {};
+        devices = [];
         pins = [];
-        noXyDevices = [];
 
         const lines = text.split(/\r?\n/);
         let inBoundary = false;
         let currentBoundary = [];
 
-        // 1. Line-by-Line Outline Parsing
+        // 1. Parse PCB Outlines
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
+            
             if (line.toLowerCase().startsWith('boundary')) {
                 inBoundary = true;
-                const inlineNums = line.replace(/boundary/i, '').trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
-                if (inlineNums.length >= 2) currentBoundary.push(...inlineNums);
+                const nums = line.replace(/boundary/i, '').trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
+                if (nums.length >= 2) currentBoundary.push(...nums);
                 continue;
             }
+
             if (inBoundary) {
                 if (line.toLowerCase().startsWith('device') || line.toLowerCase().startsWith('node') || line === '}') {
                     if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
@@ -246,9 +172,10 @@
         }
         if (currentBoundary.length >= 4) boardOutlines.push(currentBoundary);
 
-        // 2. Flexible Device & Pin Parsing
+        // 2. Parse Component Outlines & Pin Locations
         const devRegex = /device\s+["']?([^"'\s]+)["']?\s*\{([^}]+)\}/gi;
         let match;
+
         while ((match = devRegex.exec(text)) !== null) {
             const devId = match[1];
             const block = match[2];
@@ -259,109 +186,157 @@
             let devPins = [];
 
             while ((pMatch = pinRegex.exec(block)) !== null) {
-                const pInfo = {
+                const pinObj = {
+                    dev: devId,
                     id: pMatch[1],
                     x: parseFloat(pMatch[2]),
                     y: parseFloat(pMatch[3]),
                     side: side,
-                    node: pMatch[4].trim(),
-                    dev: devId
+                    net: pMatch[4].trim()
                 };
-                pins.push(pInfo);
-                devPins.push(pInfo);
+                pins.push(pinObj);
+                devPins.push(pinObj);
             }
 
             if (devPins.length > 0) {
                 const xs = devPins.map(p => p.x);
                 const ys = devPins.map(p => p.y);
-                devices[devId] = {
+                
+                // Construct bounding box around component pins
+                const minX = Math.min(...xs), maxX = Math.max(...xs);
+                const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+                devices.push({
+                    id: devId,
                     side: side,
-                    bbox: [Math.min(...xs) - 800, Math.min(...ys) - 800, Math.max(...xs) + 800, Math.max(...ys) + 800],
+                    minX: minX - 400,
+                    maxX: maxX + 400,
+                    minY: minY - 400,
+                    maxY: maxY + 400,
                     pins: devPins
-                };
-            } else {
-                noXyDevices.push(devId);
+                });
             }
         }
 
-        // Diagnostic summary output
-        notesEl.innerText += `\n\n--- PARSE SUMMARY ---\nOutlines Found: ${boardOutlines.length}\nDevices Found: ${Object.keys(devices).length}\nPins Processed: ${pins.length}\nNo-XY Devices: ${noXyDevices.length}`;
-
-        const listContainer = document.getElementById('no-xy-list');
-        listContainer.innerHTML = noXyDevices.map(d => `<div>${d}</div>`).join('');
+        logEl.innerText = `Parsing Complete!\n\nBoundaries: ${boardOutlines.length}\nDevices: ${devices.length}\nPins: ${pins.length}`;
     }
 
+    // Coordinate Transformations (Inverts Y for standard PCB layout view)
     function worldToScreen(wx, wy) {
-        const sx = (wx * scale) + offsetX;
-        const sy = canvas.height - ((wy * scale) + offsetY);
-        return { x: sx, y: sy };
+        return {
+            x: (wx * scale) + panX,
+            y: canvas.height - ((wy * scale) + panY)
+        };
     }
 
     function screenToWorld(sx, sy) {
-        const wx = (sx - offsetX) / scale;
-        const wy = (canvas.height - sy - offsetY) / scale;
-        return { x: wx, y: wy };
+        return {
+            x: (sx - panX) / scale,
+            y: (canvas.height - sy - panY) / scale
+        };
     }
 
     function redraw() {
         if (!ctx) return;
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const showOutlines = document.getElementById('chk-outlines').checked;
-        const showTopDev = document.getElementById('chk-top-dev').checked;
-        const showBotDev = document.getElementById('chk-bot-dev').checked;
-        const showTopXY = document.getElementById('chk-top-xy').checked;
-        const showBotXY = document.getElementById('chk-bot-xy').checked;
+        const showOutline = document.getElementById('chk-outline').checked;
+        const showTop = document.getElementById('chk-top').checked;
+        const showBot = document.getElementById('chk-bot').checked;
+        const showPins = document.getElementById('chk-pins').checked;
 
-        if (showOutlines) {
+        // 1. Draw Board Perimeter
+        if (showOutline && boardOutlines.length > 0) {
             ctx.strokeStyle = '#ff00ff';
             ctx.lineWidth = 1.5;
             boardOutlines.forEach(line => {
                 ctx.beginPath();
                 for (let i = 0; i < line.length - 1; i += 2) {
-                    const p = worldToScreen(line[i], line[i+1]);
-                    if (i === 0) ctx.moveTo(p.x, p.y);
-                    else ctx.lineTo(p.x, p.y);
+                    const pt = worldToScreen(line[i], line[i+1]);
+                    if (i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
                 }
                 ctx.stroke();
             });
         }
 
-        Object.keys(devices).forEach(devId => {
-            const dev = devices[devId];
-            if ((dev.side === 'T' && showTopDev) || (dev.side === 'B' && showBotDev)) {
-                ctx.strokeStyle = dev.side === 'T' ? '#55ffff' : '#ffaa00';
+        // 2. Draw Component Outline Rectangles
+        devices.forEach(dev => {
+            if ((dev.side === 'T' && showTop) || (dev.side === 'B' && showBot)) {
+                ctx.strokeStyle = dev.side === 'T' ? '#00ffff' : '#ffaa00';
                 ctx.lineWidth = 1;
-                const p1 = worldToScreen(dev.bbox[0], dev.bbox[1]);
-                const p2 = worldToScreen(dev.bbox[2], dev.bbox[3]);
-                ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+                
+                const p1 = worldToScreen(dev.minX, dev.minY);
+                const p2 = worldToScreen(dev.maxX, dev.maxY);
+                
+                ctx.strokeRect(p1.x, p2.y, p2.x - p1.x, p1.y - p2.y);
             }
         });
 
-        pins.forEach(p => {
-            if ((p.side === 'T' && showTopXY) || (p.side === 'B' && showBotXY)) {
-                ctx.fillStyle = p.side === 'T' ? '#ffffff' : '#ffff00';
-                const pt = worldToScreen(p.x, p.y);
-                ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
-            }
-        });
+        // 3. Draw Component Pins
+        if (showPins) {
+            pins.forEach(p => {
+                if ((p.side === 'T' && showTop) || (p.side === 'B' && showBot)) {
+                    ctx.fillStyle = p.side === 'T' ? '#ffffff' : '#ffff00';
+                    const pt = worldToScreen(p.x, p.y);
+                    ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
+                }
+            });
+        }
     }
 
-    function zoomFull() {
-        if (pins.length === 0) return;
-        const xs = pins.map(p => p.x);
-        const ys = pins.map(p => p.y);
-        const minX = Math.min(...xs), maxX = Math.max(...xs);
-        const minY = Math.min(...ys), maxY = Math.max(...ys);
+    function zoomFit() {
+        if (pins.length === 0 && boardOutlines.length === 0) return;
 
-        const bw = (maxX - minX) || 1;
-        const bh = (maxY - minY) || 1;
+        let allX = pins.map(p => p.x);
+        let allY = pins.map(p => p.y);
 
-        scale = Math.min(canvas.width / bw, canvas.height / bh) * 0.85;
-        offsetX = (canvas.width - (bw * scale)) / 2 - (minX * scale);
-        offsetY = (canvas.height - (bh * scale)) / 2 - (minY * scale);
+        if (allX.length === 0) {
+            boardOutlines.forEach(line => {
+                for(let i=0; i<line.length-1; i+=2) {
+                    allX.push(line[i]);
+                    allY.push(line[i+1]);
+                }
+            });
+        }
+
+        const minX = Math.min(...allX), maxX = Math.max(...allX);
+        const minY = Math.min(...allY), maxY = Math.max(...allY);
+        const width = (maxX - minX) || 1000;
+        const height = (maxY - minY) || 1000;
+
+        scale = Math.min(canvas.width / width, canvas.height / height) * 0.8;
+        panX = (canvas.width - (width * scale)) / 2 - (minX * scale);
+        panY = (canvas.height - (height * scale)) / 2 - (minY * scale);
+
         redraw();
+    }
+
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const world = screenToWorld(mouseX, mouseY);
+
+        // Pin Selection Hit Test
+        const hitRadius = 200 / scale;
+        const clickedPin = pins.find(p => Math.abs(p.x - world.x) < hitRadius && Math.abs(p.y - world.y) < hitRadius);
+
+        if (clickedPin) {
+            inspectorEl.innerText = `PIN DETECTED\n\nDevice: ${clickedPin.dev}\nPin ID: ${clickedPin.id}\nNet/Node: ${clickedPin.net}\nSide: ${clickedPin.side === 'T' ? 'Top' : 'Bottom'}\nLocation: (${Math.round(clickedPin.x)}, ${Math.round(clickedPin.y)})`;
+            return;
+        }
+
+        // Component Selection Hit Test
+        const clickedDev = devices.find(d => world.x >= d.minX && world.x <= d.maxX && world.y >= d.minY && world.y <= d.maxY);
+
+        if (clickedDev) {
+            inspectorEl.innerText = `COMPONENT DETECTED\n\nDevice ID: ${clickedDev.id}\nSide: ${clickedDev.side === 'T' ? 'Top' : 'Bottom'}\nTotal Pins: ${clickedDev.pins.length}`;
+            return;
+        }
+
+        inspectorEl.innerText = `Canvas Click:\nX: ${Math.round(world.x)}\nY: ${Math.round(world.y)}`;
     }
 </script>
 </body>
