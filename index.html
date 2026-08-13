@@ -473,7 +473,17 @@
       mainCtx.save();
       // Apply panning and zooming transform
       mainCtx.translate(state.transform.x, state.transform.y);
-      mainCtx.scale(state.transform.scale, -state.transform.scale); // Invert Y axis for PCB coords
+
+      // Mirror Vertically when in Bottom View (Agilent 3070 Standard)
+      const flipY = (state.currentSide === 'BOTTOM') ? 1 : -1;
+      if (state.currentSide === 'BOTTOM') {
+        const centerY = (state.bounds.minY + state.bounds.maxY) / 2;
+        mainCtx.translate(0, centerY * state.transform.scale);
+        mainCtx.scale(state.transform.scale, flipY * state.transform.scale);
+        mainCtx.translate(0, -centerY);
+      } else {
+        mainCtx.scale(state.transform.scale, flipY * state.transform.scale);
+      }
 
       // 1. Board Outline
       if (state.visibility.boardOutline) {
@@ -486,32 +496,32 @@
       // 2. Pins & Component Representations
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
-          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
+          const isTopPin = pin.side === 'TOP';
+          const isBottomPin = pin.side === 'BOTTOM';
+          const isBothPin = pin.side === 'BOTH';
 
-          // Filter by side visibility setting
+          // Check Pin Visibility
           if (isTopPin && !state.visibility.topPins) return;
           if (isBottomPin && !state.visibility.bottomPins) return;
-
-          // Side View Filter
-          if (state.currentSide === 'TOP' && isBottomPin && !isTopPin) return;
-          if (state.currentSide === 'BOTTOM' && isTopPin && !isBottomPin) return;
+          if (isBothPin && !state.visibility.topPins && !state.visibility.bottomPins) return;
 
           // Draw Pin Point
           mainCtx.beginPath();
           mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
-          if (isTopPin) {
+          if (isTopPin || (isBothPin && state.currentSide === 'TOP')) {
             mainCtx.fillStyle = '#38bdf8';
           } else {
             mainCtx.fillStyle = '#f43f5e';
           }
           mainCtx.fill();
 
-          // Component Outline simulation around labeled pins
+          // Component Outline simulation
           if (pin.ref) {
-            const isTopComp = isTopPin;
-            if ((isTopComp && state.visibility.topComp) || (!isTopComp && state.visibility.bottomComp)) {
-              mainCtx.strokeStyle = isTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
+            const showTopComp = (isTopPin || isBothPin) && state.visibility.topComp;
+            const showBottomComp = (isBottomPin || isBothPin) && state.visibility.bottomComp;
+
+            if (showTopComp || showBottomComp) {
+              mainCtx.strokeStyle = showTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
               mainCtx.lineWidth = 1 / state.transform.scale;
               mainCtx.strokeRect(pin.x - 200, pin.y - 200, 400, 400);
             }
@@ -569,7 +579,7 @@
         });
       });
 
-      // Draw Viewport Box (Where user is currently zoomed)
+      // Draw Viewport Box
       const vpLeft = (-state.transform.x - b.minX + 1000) * (scale / state.transform.scale) + offsetX;
       const vpTop = (-state.transform.y - b.minY + 1000) * (scale / state.transform.scale) + offsetY;
       const vpW = mainCanvas.width * (scale / state.transform.scale);
