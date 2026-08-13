@@ -111,7 +111,6 @@
         const ctx = canvas.getContext('2d');
         const fileInput = document.getElementById('fileInput');
 
-        // UI Controls
         const chkOutline = document.getElementById('chkOutline');
         const chkTop = document.getElementById('chkTop');
         const chkBottom = document.getElementById('chkBottom');
@@ -132,7 +131,6 @@
         }
         window.addEventListener('resize', resizeCanvas);
 
-        // Re-draw when controls change
         [chkOutline, chkTop, chkBottom, viewModeSelect].forEach(el => {
             el.addEventListener('change', draw);
         });
@@ -152,61 +150,85 @@
 
         function parseBoardXY(text) {
             boardData = { outline: [], points: [] };
-            const lines = text.split('\n');
+            
+            // Clean formatting and split by semicolons or newlines to handle dense blocks properly
+            const cleanText = text.replace(/[\r\n]+/g, ' ');
+            const statements = cleanText.split(';');
+            
             let inOutline = false;
 
-            for (let rawLine of lines) {
-                let line = rawLine.trim();
-                if (!line || line.startsWith('!') || line.startsWith('//') || line.startsWith('#')) continue;
+            for (let stmt of statements) {
+                stmt = stmt.trim();
+                if (!stmt) continue;
 
-                const upperLine = line.toUpperCase();
+                const upperStmt = stmt.toUpperCase();
 
-                // Section Headers
-                if (upperLine.includes('OUTLINE')) {
+                if (upperStmt.startsWith('OUTLINE')) {
                     inOutline = true;
+                    // Extract coordinates following OUTLINE keyword
+                    let coordStr = stmt.substring(7);
+                    extractCoords(coordStr, 'OUTLINE');
                     continue;
                 }
 
-                // Exit outline mode if a new section starts or a node side is detected
-                if (upperLine.includes('END') || upperLine.includes('NODE') || upperLine.includes('DEVICE') || 
-                    upperLine.includes('TOP') || upperLine.includes('BOTTOM') || upperLine.includes('BOT')) {
+                if (upperStmt.startsWith('NODE') || upperStmt.startsWith('OTHER') || upperStmt.startsWith('UNITS') || upperStmt.startsWith('SCALE') || upperStmt.startsWith('PLACEMENT')) {
                     inOutline = false;
                 }
 
-                // 1. Process Board Outline Coordinates
                 if (inOutline) {
-                    const coords = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/);
-                    if (coords) {
-                        boardData.outline.push({ x: parseInt(coords[1]), y: parseInt(coords[2]) });
-                        continue;
-                    }
+                    extractCoords(stmt, 'OUTLINE');
+                    continue;
                 }
 
-                // 2. Process Nodes / Pins (Supports TOP, BOTTOM, BOT, B, T and special characters in node names)
-                const nodeMatch = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)\s+([^\s]+)\s+(TOP|BOTTOM|BOT|B|T)\b/i);
+                // Match pin nodes containing explicit side definitions (TOP, BOTTOM, BOT, T, B)
+                // Handles formats like: "1400, 28100 TN1.1 MANDATORY" or "J3.1 TOP NO_PROBE"
+                const pinRegex = /(-?\d+)\s*[, \t]+\s*(-?\d+)\s+([^\s;]+)?\s*(TOP|BOTTOM|BOT|B|T)\b/gi;
+                let match;
+                let foundMatch = false;
 
-                if (nodeMatch) {
-                    let rawSide = nodeMatch[4].toUpperCase();
+                while ((match = pinRegex.exec(stmt)) !== null) {
+                    foundMatch = true;
+                    let rawSide = match[4].toUpperCase();
                     let side = (rawSide === 'BOTTOM' || rawSide === 'BOT' || rawSide === 'B') ? 'BOTTOM' : 'TOP';
+                    let pinName = match[3] || 'PIN';
 
                     boardData.points.push({
-                        x: parseInt(nodeMatch[1]),
-                        y: parseInt(nodeMatch[2]),
-                        name: nodeMatch[3],
+                        x: parseInt(match[1]),
+                        y: parseInt(match[2]),
+                        name: pinName,
                         side: side
                     });
-                } else {
-                    // Fallback scanner for non-standard line formatting containing side keywords
-                    const fallbackCoords = line.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/);
-                    if (fallbackCoords && (upperLine.includes('TOP') || upperLine.includes('BOTTOM') || upperLine.includes('BOT'))) {
-                        let side = (upperLine.includes('BOTTOM') || upperLine.includes('BOT')) ? 'BOTTOM' : 'TOP';
-                        boardData.points.push({
-                            x: parseInt(fallbackCoords[1]),
-                            y: parseInt(fallbackCoords[2]),
-                            name: 'PIN',
-                            side: side
-                        });
+                }
+
+                // Fallback for lines containing coordinates and side information without explicit pin tokens in standard order
+                if (!foundMatch && (upperStmt.includes('TOP') || upperStmt.includes('BOTTOM') || upperStmt.includes('BOT'))) {
+                    const fallbackCoords = stmt.match(/(-?\d+)\s*[, \t]+\s*(-?\d+)/g);
+                    if (fallbackCoords) {
+                        let side = (upperStmt.includes('BOTTOM') || upperStmt.includes('BOT')) ? 'BOTTOM' : 'TOP';
+                        for (let coordPair of fallbackCoords) {
+                            let parts = coordPair.split(/[\s,]+/);
+                            if (parts.length >= 2) {
+                                boardData.points.push({
+                                    x: parseInt(parts[0]),
+                                    y: parseInt(parts[1]),
+                                    name: 'PIN',
+                                    side: side
+                                });
+                            }
+                        }
                     }
+                }
+            }
+        }
+
+        function extractCoords(str, type) {
+            const pairRegex = /(-?\d+)\s*[, \t]+\s*(-?\d+)/g;
+            let match;
+            while ((match = pairRegex.exec(str)) !== null) {
+                let x = parseInt(match[1]);
+                let y = parseInt(match[2]);
+                if (type === 'OUTLINE') {
+                    boardData.outline.push({ x: x, y: y });
                 }
             }
         }
@@ -223,7 +245,6 @@
         }
 
         function getTransformedX(x) {
-            // Mirrors board horizontally when 'Bottom View' is selected
             return (viewModeSelect.value === 'bottom') ? (2 * boardCenterX - x) : x;
         }
 
@@ -285,7 +306,6 @@
             draw();
         }
 
-        // Mouse Controls
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX - panX;
