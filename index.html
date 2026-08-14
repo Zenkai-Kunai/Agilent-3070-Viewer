@@ -373,13 +373,12 @@
   </div>
 
   <script>
-    // State management
     const state = {
       file1Text: '',
       file2Text: '',
       nodes: [],
       boardOutline: [],
-      currentSide: 'TOP', // 'TOP' or 'BOTTOM'
+      currentSide: 'TOP',
       visibility: {
         topPins: true,
         bottomPins: true,
@@ -605,7 +604,6 @@
         }
       }
 
-      // Draw highlighted connection net lines on right-click
       if (state.highlightedNode) {
         mainCtx.strokeStyle = '#f59e0b';
         mainCtx.lineWidth = 2.5 / state.transform.scale;
@@ -634,7 +632,7 @@
 
           const isSelected = (state.selectedPin === pin);
           const isConnected = (state.highlightedNode === node);
-          const pinRadius = (isSelected || isConnected) ? 200 : 120;
+          const pinRadius = (isSelected || isConnected) ? 350 : 180;
 
           if (showTop && showBottom) {
             mainCtx.beginPath();
@@ -662,7 +660,7 @@
             mainCtx.strokeStyle = '#ffffff';
             mainCtx.lineWidth = 4 / state.transform.scale;
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 280, 0, Math.PI * 2);
+            mainCtx.arc(pin.x, pin.y, 400, 0, Math.PI * 2);
             mainCtx.stroke();
           }
 
@@ -769,6 +767,7 @@
       overviewCtx.fillRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
     }
 
+    // FIXED HIT TEST: Inverted transformation map aligned perfectly with render matrix
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
@@ -783,7 +782,7 @@
       }
 
       let closestPin = null;
-      let minDistance = 350 / state.transform.scale;
+      let minDistance = 600 / state.transform.scale; // Generous hit radius for click ease
 
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
@@ -805,7 +804,6 @@
       return closestPin;
     }
 
-    // Left Click Handler (Show Component & Pin info)
     function handleLeftClick(e) {
       const hit = getPinAtMouse(e.clientX, e.clientY);
       const infoBox = document.getElementById('infoBox');
@@ -832,7 +830,6 @@
       }
     }
 
-    // Right Click Handler (Show connected pins on the same node net)
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault(); 
       const hit = getPinAtMouse(e.clientX, e.clientY);
