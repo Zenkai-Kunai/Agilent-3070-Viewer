@@ -713,9 +713,6 @@
 
       mainCtx.save();
       mainCtx.translate(state.transform.x, state.transform.y);
-
-      // Fixed canvas scaling: Removed the vertical axis inversion/flipping when viewing from the bottom 
-      // to prevent through-hole and dual-sided pins from splitting into half-circles.
       mainCtx.scale(state.transform.scale, -state.transform.scale);
 
       // 1. Board Outline
@@ -753,7 +750,12 @@
         }
       }
 
-      // 2. Pins & Components
+      // 2. Pins & Components (Rendered as Rectangles)
+      const pinWidth = 360;
+      const pinHeight = 360;
+      const halfW = pinWidth / 2;
+      const halfH = pinHeight / 2;
+
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
@@ -765,45 +767,33 @@
           const showTopComp = isTopPin && state.visibility.topComp;
           const showBottomComp = isBottomPin && state.visibility.bottomComp;
 
-          // Render Pins (X-Y Locations) Full Circles Independently
+          // Render Rectangular Pins
           if (showTopPin && pin.side === 'TOP') {
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
             mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-            mainCtx.fill();
+            mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
           }
           if (showBottomPin && pin.side === 'BOTTOM') {
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
             mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#f43f5e';
-            mainCtx.fill();
+            mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
           }
           if (pin.side === 'BOTH') {
             if (showTopPin && showBottomPin) {
-              mainCtx.beginPath();
-              mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
               mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-              mainCtx.fill();
+              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
             } else if (showTopPin) {
-              mainCtx.beginPath();
-              mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
               mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-              mainCtx.fill();
+              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
             } else if (showBottomPin) {
-              mainCtx.beginPath();
-              mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
               mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#f43f5e';
-              mainCtx.fill();
+              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
             }
           }
 
-          // Render Selected Pin Indicator Ring
+          // Render Selected Pin Indicator Rectangular Box
           if (state.selectedPin === pin) {
             mainCtx.strokeStyle = '#ffffff';
             mainCtx.lineWidth = 3 / state.transform.scale;
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 300, 0, Math.PI * 2);
-            mainCtx.stroke();
+            mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
           }
 
           // Render Independent Device Outlines
@@ -862,7 +852,7 @@
       });
     }
 
-    // Precise Hit-test mapping for pin clicks (eliminates ghost touch)
+    // Hit-test mapping for pin clicks
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
@@ -877,7 +867,6 @@
 
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          // Unified coordinate mapping matching non-inverted canvas rendering
           const screenX = pin.x * scale + tx;
           const screenY = -pin.y * scale + ty;
           
@@ -1061,11 +1050,11 @@
       render();
     }, { passive: false });
 
-    // Checkbox Feature Toggles (Independent Top/Bottom Pin & Device Outlines)
+    // Checkbox Feature Toggles
     document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
     document.getElementById('chkTopXY').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
     document.getElementById('chkBottomXY').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
-    document.EqualchkTopComp = document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
+    document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
 
     resizeCanvas();
