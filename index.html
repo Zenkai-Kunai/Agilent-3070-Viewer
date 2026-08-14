@@ -286,15 +286,15 @@
       <div class="section-title">Load Board File(s)</div>
       <div class="file-input-group">
         <label class="file-btn">
-          Select File 1 (or Full File)
+          Select Board / XY File
           <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
         </label>
         <div class="file-status" id="file1Status">No file selected</div>
 
-        <!-- UPGRADED to Wirelist File -->
+        <!-- Wirelist File Button -->
         <label class="file-btn" style="margin-top: 6px;">
           Select Wirelist File
-          <input type="file" id="fileInput2" accept=".file,.xy,.wire,.txt,*">
+          <input type="file" id="fileInput2" accept=".file,.wire,.txt,*">
         </label>
         <div class="file-status" id="file2Status">No file selected</div>
       </div>
@@ -351,7 +351,7 @@
   <div id="viewport">
     <canvas id="mainCanvas"></canvas>
     
-    <!-- Pin Info Pop-up Box (New Feature) -->
+    <!-- Pin Info Pop-up Box -->
     <div id="infoBox">
       <h3><span>Pin Information</span> <button class="close-btn" id="closeInfoBox">&times;</button></h3>
       <p>Component: <span id="infoComp">-</span></p>
@@ -391,22 +391,18 @@
       transform: { x: 0, y: 0, scale: 1 },
       isDragging: false,
       dragStart: { x: 0, y: 0 },
-      
-      // New Interaction States
       selectedPin: null,
       highlightedNode: null
     };
 
     let dragStartPos = { x: 0, y: 0 };
 
-    // Canvas contexts
     const viewport = document.getElementById('viewport');
     const mainCanvas = document.getElementById('mainCanvas');
     const mainCtx = mainCanvas.getContext('2d');
     const overviewCanvas = document.getElementById('overviewCanvas');
     const overviewCtx = overviewCanvas.getContext('2d');
 
-    // Initialize dimensions
     function resizeCanvas() {
       mainCanvas.width = viewport.clientWidth;
       mainCanvas.height = viewport.clientHeight;
@@ -416,7 +412,6 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Parse Agilent 3070 board_xy file content + Wirelist combined logic
     function parseBoardXY(text) {
       const nodes = [];
       const outline = [];
@@ -428,11 +423,9 @@
         let trimmed = line.trim();
         if (!trimmed) continue;
 
-        // Catch the start of OUTLINE or BOARD_OUTLINE section (case-insensitive)
         if (/^(BOARD_)?OUTLINE/i.test(trimmed)) {
           parsingOutline = true;
           currentNode = null;
-          // Check if coordinates are on the same line after OUTLINE
           const parts = trimmed.split(/\s+/);
           if (parts.length > 1) {
             const rest = parts.slice(1).join(' ');
@@ -444,7 +437,6 @@
           continue;
         }
 
-        // Catch the start of the NODE section
         if (trimmed.startsWith('NODE')) {
           parsingOutline = false;
           const parts = trimmed.split(/\s+/);
@@ -457,7 +449,6 @@
         }
 
         if (parsingOutline) {
-          // If we hit a semicolon or another section marker, stop parsing outline
           if (trimmed.includes(';') || trimmed.startsWith('NODE')) {
             parsingOutline = false;
           }
@@ -466,7 +457,6 @@
             outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
           }
         } else if (currentNode) {
-          // Parse pin coordinates & extract deeper component/pin info
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
             const x = parseInt(coordMatch[1], 10);
@@ -475,7 +465,6 @@
             const isTop = meta.includes('TOP');
             const isBottom = meta.includes('BOTTOM');
             
-            // Extract Reference (e.g., U200.1)
             const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
             const compRef = compMatch ? compMatch[1] : '';
             const partsComp = compRef.split('.');
@@ -485,8 +474,8 @@
               y,
               side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
               ref: compRef,
-              component: partsComp[0] || compRef, // U200
-              pinNum: partsComp[1] || '',         // 1
+              component: partsComp[0] || compRef,
+              pinNum: partsComp[1] || '',
               rawMeta: meta,
               nodeName: currentNode.name
             });
@@ -510,7 +499,6 @@
         });
       });
 
-      // Factor in board outline for viewport bounds calculation
       if (outline && outline.length > 0) {
         outline.forEach(pt => {
           if (pt.x < minX) minX = pt.x;
@@ -548,7 +536,6 @@
       render();
     }
 
-    // Process files
     function processFiles() {
       const combinedText = state.file1Text + '\n' + state.file2Text;
       const parsedData = parseBoardXY(combinedText);
@@ -581,19 +568,15 @@
       reader.readAsText(file);
     });
 
-    // Render Canvas
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
 
-      // Draw Grid Background
       drawGrid(mainCtx, mainCanvas.width, mainCanvas.height);
 
       mainCtx.save();
-      // Apply panning and zooming transform
       mainCtx.translate(state.transform.x, state.transform.y);
 
-      // Mirror Vertically when in Bottom View (Agilent 3070 Standard)
       const flipY = (state.currentSide === 'BOTTOM') ? 1 : -1;
       if (state.currentSide === 'BOTTOM') {
         const centerY = (state.bounds.minY + state.bounds.maxY) / 2;
@@ -604,12 +587,10 @@
         mainCtx.scale(state.transform.scale, flipY * state.transform.scale);
       }
 
-      // 1. Board Outline
       if (state.visibility.boardOutline) {
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
         
-        // Draw Real Extracted Board Outline
         if (state.boardOutline && state.boardOutline.length > 0) {
           mainCtx.beginPath();
           mainCtx.moveTo(state.boardOutline[0].x, state.boardOutline[0].y);
@@ -619,13 +600,12 @@
           mainCtx.closePath();
           mainCtx.stroke();
         } else {
-          // Fallback box logic if BOARD_OUTLINE is empty
           const b = state.bounds;
           mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
         }
       }
 
-      // 2. Draw Highlighted Connection Nets (Right-Click)
+      // Draw highlighted connection net lines on right-click
       if (state.highlightedNode) {
         mainCtx.strokeStyle = '#f59e0b';
         mainCtx.lineWidth = 2.5 / state.transform.scale;
@@ -642,7 +622,6 @@
         }
       }
 
-      // 3. Pins & Component Representations
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
@@ -657,7 +636,6 @@
           const isConnected = (state.highlightedNode === node);
           const pinRadius = (isSelected || isConnected) ? 200 : 120;
 
-          // Draw Pin Point
           if (showTop && showBottom) {
             mainCtx.beginPath();
             mainCtx.arc(pin.x, pin.y, pinRadius, Math.PI / 2, Math.PI * 1.5, false);
@@ -680,7 +658,6 @@
             mainCtx.fill();
           }
 
-          // Outline Selected Pin
           if (isSelected) {
             mainCtx.strokeStyle = '#ffffff';
             mainCtx.lineWidth = 4 / state.transform.scale;
@@ -689,7 +666,6 @@
             mainCtx.stroke();
           }
 
-          // Component Outline simulation
           if (pin.ref) {
             const showTopComp = isTopPin && state.visibility.topComp;
             const showBottomComp = isBottomPin && state.visibility.bottomComp;
@@ -704,8 +680,6 @@
       });
 
       mainCtx.restore();
-
-      // Render Overview Map
       renderOverview();
     }
 
@@ -723,7 +697,6 @@
       ctx.stroke();
     }
 
-    // Render Overview Map & Perfectly Track Viewport (Major Fix here)
     function renderOverview() {
       const w = overviewCanvas.width;
       const h = overviewCanvas.height;
@@ -735,19 +708,17 @@
 
       if (boardW <= 0 || boardH <= 0) return;
 
-      const pad = 0.05; // 5% padding
+      const pad = 0.05;
       const scale = Math.min((w * (1 - pad)) / boardW, (h * (1 - pad)) / boardH);
       const offsetX = (w - boardW * scale) / 2;
       const offsetY = (h - boardH * scale) / 2;
 
-      // Coordinate converter for minimap placement
       function worldToMinimap(wx, wy) {
         const mx = offsetX + (wx - b.minX) * scale;
-        const my = h - (offsetY + (wy - b.minY) * scale); // Inverted Y map
+        const my = h - (offsetY + (wy - b.minY) * scale);
         return { x: mx, y: my };
       }
 
-      // Draw Mini Board Outline
       overviewCtx.strokeStyle = '#334155';
       if (state.boardOutline && state.boardOutline.length > 0) {
         overviewCtx.beginPath();
@@ -762,7 +733,6 @@
         overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
       }
 
-      // Draw Pins on Mini Map
       overviewCtx.fillStyle = '#38bdf8';
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
@@ -771,9 +741,6 @@
         });
       });
 
-      // --- Precise Viewport Box Mapping Fix ---
-      // We map the four corners of the screen directly into world coordinates, 
-      // ensuring pan offsets and "flip side" translates are mathematically accounted for.
       function screenToWorld(sx, sy) {
         const wx = (sx - state.transform.x) / state.transform.scale;
         let wy = (sy - state.transform.y) / state.transform.scale;
@@ -784,18 +751,16 @@
         return { x: wx, y: wy };
       }
 
-      const tl = screenToWorld(0, 0); // Top Left screen corner
-      const br = screenToWorld(mainCanvas.width, mainCanvas.height); // Bottom Right screen corner
+      const tl = screenToWorld(0, 0);
+      const br = screenToWorld(mainCanvas.width, mainCanvas.height);
 
-      // Determine viewport bounding box in world space
       const vpMinX = Math.min(tl.x, br.x);
       const vpMaxX = Math.max(tl.x, br.x);
       const vpMinY = Math.min(tl.y, br.y);
       const vpMaxY = Math.max(tl.y, br.y);
 
-      // Map to minimap coords
-      const mm1 = worldToMinimap(vpMinX, vpMaxY); // MaxY mapped due to inverted drawing Y 
-      const mm2 = worldToMinimap(vpMaxX, vpMinY); 
+      const mm1 = worldToMinimap(vpMinX, vpMaxY);
+      const mm2 = worldToMinimap(vpMaxX, vpMinY);
 
       overviewCtx.strokeStyle = '#f59e0b';
       overviewCtx.lineWidth = 1.5;
@@ -804,7 +769,6 @@
       overviewCtx.fillRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
     }
 
-    // Interactive Hit Test helper
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
@@ -819,7 +783,7 @@
       }
 
       let closestPin = null;
-      let minDistance = 350 / state.transform.scale; // Hit radius tolerance
+      let minDistance = 350 / state.transform.scale;
 
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
@@ -841,14 +805,14 @@
       return closestPin;
     }
 
-    // Left Click Handler (Info Select)
+    // Left Click Handler (Show Component & Pin info)
     function handleLeftClick(e) {
       const hit = getPinAtMouse(e.clientX, e.clientY);
       const infoBox = document.getElementById('infoBox');
 
       if (hit) {
         state.selectedPin = hit.pin;
-        state.highlightedNode = null; // Clearing right-click mode
+        state.highlightedNode = null;
         
         document.getElementById('infoComp').innerText = hit.pin.component || 'N/A';
         document.getElementById('infoPinNum').innerText = hit.pin.pinNum || 'N/A';
@@ -868,7 +832,7 @@
       }
     }
 
-    // Right Click Handler (Connection Highlight)
+    // Right Click Handler (Show connected pins on the same node net)
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault(); 
       const hit = getPinAtMouse(e.clientX, e.clientY);
@@ -904,9 +868,8 @@
       render();
     });
 
-    // Mouse Interaction (Pan & Zoom + Click separation)
     viewport.addEventListener('mousedown', (e) => {
-      if (e.button === 0) { // Only drag pan on left click
+      if (e.button === 0) {
         state.isDragging = true;
         state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
         dragStartPos = { x: e.clientX, y: e.clientY };
@@ -914,7 +877,6 @@
     });
 
     viewport.addEventListener('click', (e) => {
-      // Calculate dist so dragging doesn't randomly trigger a Pin Left click 
       const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
       if (dist < 5) {
         handleLeftClick(e);
@@ -944,15 +906,14 @@
       render();
     }, { passive: false });
 
-    // UI Event Listeners for View Toggle & Features
-    document.getElementById('btnTopView').addEventListener('click', (e) => {
+    document.getElementById('btnTopView').addEventListener('click', () => {
       state.currentSide = 'TOP';
       document.getElementById('btnTopView').classList.add('active');
       document.getElementById('btnBottomView').classList.remove('active');
       render();
     });
 
-    document.getElementById('btnBottomView').addEventListener('click', (e) => {
+    document.getElementById('btnBottomView').addEventListener('click', () => {
       state.currentSide = 'BOTTOM';
       document.getElementById('btnBottomView').classList.add('active');
       document.getElementById('btnTopView').classList.remove('active');
@@ -965,7 +926,6 @@
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
     document.getElementById('chkBoardOutline').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
 
-    // Initial Layout Setup
     resizeCanvas();
   </script>
 </body>
