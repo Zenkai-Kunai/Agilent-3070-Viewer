@@ -6,170 +6,195 @@
   <title>Agilent 3070 Board Graphic Viewer</title>
   <style>
     :root {
-      --bg-dark: #0f172a;
-      --panel-bg: rgba(30, 41, 59, 0.85);
-      --border-color: #334155;
-      --accent-color: #38bdf8;
-      --accent-hover: #0284c7;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --top-color: #38bdf8;
-      --bottom-color: #f43f5e;
-      --outline-color: #10b981;
+      --agilent-bg: #c0c0c0;
+      --agilent-panel: #d4d0c8;
+      --agilent-dark: #808080;
+      --agilent-darker: #404040;
+      --agilent-border-light: #ffffff;
+      --agilent-border-dark: #404040;
+      --agilent-border-shadow: #808080;
+      --agilent-text: #000000;
+      --agilent-blue: #000080;
+      --agilent-title-bg: linear-gradient(90deg, #000080, #1084d0);
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: Tahoma, Arial, sans-serif;
     }
 
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
+      background-color: var(--agilent-bg);
+      color: var(--agilent-text);
       display: flex;
+      flex-direction: column;
       height: 100vh;
+      overflow: hidden;
+      font-size: 11px;
+    }
+
+    /* Classic Windows Application Title Bar */
+    .app-titlebar {
+      background: var(--agilent-title-bg);
+      color: white;
+      padding: 4px 8px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      border-bottom: 1px solid var(--agilent-border-dark);
+    }
+
+    .app-titlebar .window-controls span {
+      display: inline-block;
+      width: 16px;
+      height: 14px;
+      background: #dfdfdf;
+      color: black;
+      text-align: center;
+      line-height: 12px;
+      font-size: 10px;
+      margin-left: 2px;
+      border: 1px solid;
+      border-color: #fff #808080 #808080 #fff;
+      cursor: pointer;
+    }
+
+    /* Classic Menu Bar */
+    .menubar {
+      background: var(--agilent-panel);
+      display: flex;
+      padding: 2px 4px;
+      border-bottom: 1px solid var(--agilent-border-shadow);
+      gap: 12px;
+    }
+
+    .menubar span {
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+
+    .menubar span:hover {
+      background: #000080;
+      color: white;
+    }
+
+    /* Main App Workspace Layout */
+    .workspace {
+      display: flex;
+      flex: 1;
       overflow: hidden;
     }
 
-    /* Sidebar Navigation */
+    /* Left Control & File Sidebar Panel */
     #sidebar {
-      width: 320px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(12px);
-      border-right: 1px solid var(--border-color);
+      width: 340px;
+      background: var(--agilent-panel);
+      border-right: 2px groove var(--agilent-border-light);
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      padding: 20px;
-      z-index: 10;
-      box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      padding: 6px;
+      gap: 6px;
       overflow-y: auto;
     }
 
-    .brand-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      color: var(--accent-color);
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .win-groupbox {
+      border: 2px groove var(--agilent-border-light);
+      padding: 6px;
+      background: var(--agilent-panel);
+      position: relative;
+      margin-top: 4px;
     }
 
-    .section-box {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 14px;
+    .win-groupbox legend {
+      font-weight: bold;
+      padding: 0 4px;
+      color: var(--agilent-darker);
     }
 
-    .section-title {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
-    /* File Input Styling */
-    .file-input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    label.file-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 12px;
-      background: #1e293b;
-      border: 1px dashed var(--accent-color);
-      border-radius: 6px;
-      color: var(--accent-color);
-      font-size: 0.85rem;
+    /* Classic Windows Buttons */
+    .win-btn {
+      background: var(--agilent-panel);
+      border: 2px solid;
+      border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
+      padding: 4px 8px;
+      text-align: center;
+      font-size: 11px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      font-weight: bold;
+      color: black;
     }
 
-    label.file-btn:hover {
-      background: rgba(56, 189, 248, 0.1);
+    .win-btn:active {
+      border-color: var(--agilent-border-dark) var(--agilent-border-light) var(--agilent-border-light) var(--agilent-border-dark);
+      padding: 5px 7px 3px 9px;
     }
 
-    input[type="file"] {
-      display: none;
+    .win-btn.active {
+      background: #ece9d8;
+      border-style: inset;
     }
 
-    .file-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      word-break: break-all;
+    /* Status & Notes Panel */
+    .status-panel {
+      background: #ffffff;
+      border: 2px inset var(--agilent-border-dark);
+      padding: 6px;
+      min-height: 55px;
+      font-size: 11px;
+      margin-bottom: 6px;
     }
 
-    /* Toggle Buttons */
-    .view-toggle-group {
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .status-led {
+      width: 10px;
+      height: 10px;
+      background: #00aa00;
+      border: 1px solid #005500;
+    }
+
+    /* Features Matrix Layout */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 4px 8px;
+      align-items: center;
+      font-size: 10px;
+      margin-top: 4px;
+    }
+
+    .features-grid-header {
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 1px solid var(--agilent-dark);
+      padding-bottom: 2px;
+    }
+
+    /* Action Control Button Grid */
+    .action-buttons-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 4px;
+      margin-top: 6px;
     }
 
-    .btn {
-      padding: 8px 12px;
-      border: 1px solid var(--border-color);
-      background: #1e293b;
-      color: var(--text-main);
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-
-    .btn:hover {
-      border-color: var(--accent-color);
-    }
-
-    .btn.active {
-      background: var(--accent-color);
-      color: #0f172a;
-      border-color: var(--accent-color);
-      font-weight: 700;
-    }
-
-    /* Feature Checkboxes */
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      color: var(--text-main);
-    }
-
-    .checkbox-item input {
-      accent-color: var(--accent-color);
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-
-    /* Overview Map */
+    /* Overview Map Box */
     #overview-container {
-      position: relative;
       width: 100%;
-      height: 180px;
-      background: #090d16;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      overflow: hidden;
+      height: 140px;
+      background: #000000;
+      border: 2px inset var(--agilent-border-dark);
+      position: relative;
     }
 
     #overviewCanvas {
@@ -177,17 +202,42 @@
       height: 100%;
     }
 
-    /* Main Viewer Viewport */
-    #viewport {
+    /* Main Viewport Container */
+    .main-viewport-container {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--agilent-bg);
       position: relative;
-      background-color: #050811;
-      cursor: grab;
       overflow: hidden;
     }
 
-    #viewport:active {
-      cursor: grabbing;
+    .version-bar {
+      background: var(--agilent-panel);
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--agilent-border-dark);
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+
+    .view-toolbar {
+      background: var(--agilent-panel);
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 2px groove var(--agilent-border-light);
+    }
+
+    #viewport {
+      flex: 1;
+      position: relative;
+      background-color: #000000;
+      cursor: crosshair;
+      overflow: hidden;
+      border: 2px inset var(--agilent-border-dark);
+      margin: 4px;
     }
 
     #mainCanvas {
@@ -196,189 +246,291 @@
       left: 0;
     }
 
-    /* Floating Stats Bar */
-    .stats-bar {
+    /* Classic Windows Dialog Modal Popup (Device Entry Form) */
+    #deviceEntryModal {
       position: absolute;
-      bottom: 16px;
-      right: 16px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--border-color);
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      display: flex;
-      gap: 16px;
-      pointer-events: none;
-    }
-
-    .stats-bar span strong {
-      color: var(--text-main);
-    }
-
-    /* Pin Info Modal / Overlay Box */
-    #infoBox {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 16px;
-      width: 320px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 540px;
+      background: var(--agilent-panel);
+      border: 2px solid;
+      border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
+      box-shadow: 4px 4px 16px rgba(0,0,0,0.5);
+      z-index: 100;
       display: none;
-      z-index: 20;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     }
 
-    #infoBox h3 {
-      font-size: 0.95rem;
-      color: var(--accent-color);
-      margin-bottom: 8px;
+    .modal-titlebar {
+      background: var(--agilent-title-bg);
+      color: white;
+      padding: 4px 6px;
+      font-weight: bold;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    #infoBox p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-bottom: 6px;
+    .modal-body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    #infoBox p span {
-      color: var(--text-main);
-      font-weight: 600;
+    .modal-menu {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--agilent-dark);
+      padding-bottom: 4px;
+      font-size: 11px;
     }
 
-    #infoBox .close-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 1.2rem;
-      line-height: 1;
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
     }
 
-    #infoBox .close-btn:hover {
-      color: var(--text-main);
+    .form-row input[type="text"] {
+      background: white;
+      border: 1px inset var(--agilent-border-dark);
+      padding: 2px 4px;
+      flex: 1;
     }
+
+    /* Pin Table Grid inside Device Entry Form */
+    .pin-table-container {
+      height: 160px;
+      background: white;
+      border: 2px inset var(--agilent-border-dark);
+      overflow-y: auto;
+      margin-top: 4px;
+    }
+
+    table.pin-grid {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    table.pin-grid th {
+      background: var(--agilent-panel);
+      border: 1px solid var(--agilent-dark);
+      padding: 3px;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+
+    table.pin-grid td {
+      border: 1px solid #dfdfdf;
+      padding: 3px;
+    }
+
+    table.pin-grid tr:hover {
+      background: #000080;
+      color: white;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar Controls -->
-  <div id="sidebar">
-    <div class="brand-title">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="2" width="20" height="20" rx="4"></rect>
-        <circle cx="8" cy="8" r="2"></circle>
-        <circle cx="16" cy="16" r="2"></circle>
-        <path d="M8 10v4h8"></path>
-      </svg>
-      Agilent 3070 Viewer
-    </div>
-
-    <!-- File Input Section -->
-    <div class="section-box">
-      <div class="section-title">Load Board File(s)</div>
-      <div class="file-input-group">
-        <label class="file-btn">
-          Select Board / XY File
-          <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
-        </label>
-        <div class="file-status" id="file1Status">No file selected</div>
-
-        <!-- Wirelist File Button -->
-        <label class="file-btn" style="margin-top: 6px;">
-          Select Wirelist File
-          <input type="file" id="fileInput2" accept=".file,.wire,.txt,*">
-        </label>
-        <div class="file-status" id="file2Status">No file selected</div>
-      </div>
-    </div>
-
-    <!-- View Mode Toggle -->
-    <div class="section-box">
-      <div class="section-title">Board Side View</div>
-      <div class="view-toggle-group">
-        <button class="btn active" id="btnTopView">Top Side</button>
-        <button class="btn" id="btnBottomView">Bottom Side</button>
-      </div>
-    </div>
-
-    <!-- Feature Display Filters -->
-    <div class="section-box">
-      <div class="section-title">Feature Visibility</div>
-      <div class="checkbox-group">
-        <label class="checkbox-item">
-          <span>Top Pins</span>
-          <input type="checkbox" id="chkTopPins" checked>
-        </label>
-        <label class="checkbox-item">
-          <span>Bottom Pins</span>
-          <input type="checkbox" id="chkBottomPins" checked>
-        </label>
-        <hr style="border-color: var(--border-color); margin: 2px 0;">
-        <label class="checkbox-item">
-          <span>Top Component Outline</span>
-          <input type="checkbox" id="chkTopComp" checked>
-        </label>
-        <label class="checkbox-item">
-          <span>Bottom Component Outline</span>
-          <input type="checkbox" id="chkBottomComp" checked>
-        </label>
-        <hr style="border-color: var(--border-color); margin: 2px 0;">
-        <label class="checkbox-item">
-          <span>Board Outline</span>
-          <input type="checkbox" id="chkBoardOutline" checked>
-        </label>
-      </div>
-    </div>
-
-    <!-- Overview Minimap -->
-    <div class="section-box">
-      <div class="section-title">Overview Map</div>
-      <div id="overview-container">
-        <canvas id="overviewCanvas"></canvas>
-      </div>
+  <!-- App Title Bar -->
+  <div class="app-titlebar">
+    <span>Agilent Board Graphics Viewer: /I=/Keysight/Torredo_Main_344XX-66551/</span>
+    <div class="window-controls">
+      <span>_</span><span>□</span><span>×</span>
     </div>
   </div>
 
-  <!-- Main Viewport Canvas -->
-  <div id="viewport">
-    <canvas id="mainCanvas"></canvas>
+  <!-- Classic Menu Bar -->
+  <div class="menubar">
+    <span>File</span>
+    <span>Tasks</span>
+    <span>Search</span>
+    <span>Version</span>
+    <span>Tools</span>
+    <span style="margin-left: auto;">Help</span>
+  </div>
+
+  <!-- Main Workspace -->
+  <div class="workspace">
     
-    <!-- Pin Info Pop-up Box -->
-    <div id="infoBox">
-      <h3><span>Pin Information</span> <button class="close-btn" id="closeInfoBox">&times;</button></h3>
-      <p>Component: <span id="infoComp">-</span></p>
-      <p>Pin Number: <span id="infoPinNum">-</span></p>
-      <p>Node Name: <span id="infoNode">-</span></p>
-      <p>Side: <span id="infoSide">-</span></p>
-      <p>Coordinates: <span id="infoCoords">-</span></p>
-      <p id="infoConnectionsContainer" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
-        <strong>Connected Pins on Node:</strong><br>
-        <span id="infoConnections" style="font-size: 0.75rem; color: var(--text-main); word-break: break-all;">-</span>
-      </p>
+    <!-- Sidebar Controls -->
+    <div id="sidebar">
+      
+      <!-- Status & Notes Box -->
+      <div class="status-panel">
+        <div class="status-indicator">
+          <div class="status-led"></div>
+          <span>Status: Ready</span>
+        </div>
+        <div id="notesBox">Notes: No object was selected.</div>
+      </div>
+
+      <!-- File Loading Box -->
+      <fieldset class="win-groupbox">
+        <legend>Load Board Data</legend>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label class="win-btn" style="text-align: center;">
+            Select Board File (.file / .xy)
+            <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
+          </label>
+          <div id="file1Status" style="font-size: 10px; color: #404040; word-break: break-all;">No file selected</div>
+        </div>
+      </fieldset>
+
+      <!-- Action Buttons Grid -->
+      <div class="action-buttons-grid">
+        <button class="win-btn" id="btnShowPanel">Show Panel View</button>
+        <button class="win-btn" id="btnFullView">Full View</button>
+        <button class="win-btn" id="btnRedraw">Redraw</button>
+        <button class="win-btn" id="btnPreviousView">Previous View</button>
+        <button class="win-btn" id="btnZoomIn">Zoom In</button>
+        <button class="win-btn" id="btnZoomOut">Zoom Out</button>
+        <button class="win-btn" id="btnZoomToHighlights" style="grid-column: span 2;">Zoom To Highlights</button>
+        <button class="win-btn" id="btnClearHighlights" style="grid-column: span 2;">Clear Highlights</button>
+      </div>
+
+      <!-- Features Shown Matrix -->
+      <fieldset class="win-groupbox">
+        <legend>Features Shown</legend>
+        <div class="features-grid">
+          <div></div>
+          <div class="features-grid-header">Bottom</div>
+          <div class="features-grid-header">Top</div>
+
+          <div>Outlines</div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomOutlines"></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopOutlines" checked></div>
+
+          <div>Tooling Holes</div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomTooling"></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopTooling"></div>
+
+          <div>X-Y Locations</div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomXY"></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopXY"></div>
+
+          <div>Device Outlines</div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomComp" checked></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopComp" checked></div>
+
+          <div>Keepout Areas</div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomKeepout"></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopKeepout"></div>
+        </div>
+      </fieldset>
+
+      <!-- Overview Map Box -->
+      <fieldset class="win-groupbox">
+        <legend>Overview</legend>
+        <div id="overview-container">
+          <canvas id="overviewCanvas"></canvas>
+        </div>
+      </fieldset>
+
     </div>
 
-    <div class="stats-bar">
-      <div>Nodes: <strong id="statNodes">0</strong></div>
-      <div>Components/Pins: <strong id="statPins">0</strong></div>
-      <div>Zoom: <strong id="statZoom">100%</strong></div>
+    <!-- Main Viewport Area -->
+    <div class="main-viewport-container">
+      
+      <div class="version-bar">
+        <span>Version: ** BASE BOARD **</span>
+        <span id="cursorCoords">Cursor: 0, 0 Tenth Mils</span>
+      </div>
+
+      <div class="view-toolbar">
+        <span>View:</span>
+        <select id="viewSideSelect" class="win-btn" style="padding: 2px 6px;">
+          <option value="TOP">Top View</option>
+          <option value="BOTTOM" selected>Bottom View</option>
+        </select>
+        <span style="margin-left: auto; font-size: 10px; color: #404040;">Nodes: <strong id="statNodes">0</strong> | Components/Pins: <strong id="statPins">0</strong> | Zoom: <strong id="statZoom">100%</strong></span>
+      </div>
+
+      <!-- Canvas Viewport -->
+      <div id="viewport">
+        <canvas id="mainCanvas"></canvas>
+
+        <!-- Device Entry Form Popup Modal (Shown on Right Click) -->
+        <div id="deviceEntryModal">
+          <div class="modal-titlebar">
+            <span>Device Entry Form</span>
+            <span style="cursor: pointer; padding: 0 4px;" id="closeModalBtn">✕</span>
+          </div>
+          <div class="modal-body">
+            <div class="modal-menu">
+              <span style="text-decoration: underline; cursor: pointer;">Actions</span>
+              <span style="text-decoration: underline; cursor: pointer;">Options</span>
+              <span style="margin-left: auto; text-decoration: underline; cursor: pointer;">Help</span>
+            </div>
+            <div style="font-size: 10px; color: #404040;">Notes: Device entry configuration and pin attribute mapping.</div>
+            
+            <div class="form-row">
+              <label style="width: 90px;">Device Type:</label>
+              <input type="text" id="modalDeviceType" value="Pin Library" readonly style="flex: 0.5;">
+            </div>
+            <div class="form-row">
+              <label style="width: 90px;">Designator:</label>
+              <input type="text" id="modalDesignator" value="u901">
+              <button class="win-btn">Find</button>
+            </div>
+            <div class="form-row">
+              <label style="width: 90px;">Part Number:</label>
+              <input type="text" id="modalPartNumber" value="tm4c1292ncpdti3r">
+              <span style="font-weight: bold;">Placed:</span> <button class="win-btn" style="padding: 2px 8px;">Yes</button>
+              <span style="font-weight: bold;">Side Of Board:</span> <button class="win-btn" style="padding: 2px 8px;">Bottom</button>
+            </div>
+
+            <!-- Pin Table View -->
+            <div class="pin-table-container">
+              <table class="pin-grid">
+                <thead>
+                  <tr>
+                    <th>Pin</th>
+                    <th>Node Name</th>
+                    <th>Probe Access</th>
+                    <th>Fixture Access</th>
+                  </tr>
+                </thead>
+                <tbody id="modalPinTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="modal-buttons">
+              <button class="win-btn" style="width: 110px;">Replace Device</button>
+              <button class="win-btn" style="width: 110px;">Delete Device</button>
+              <button class="win-btn" id="modalCloseBtn" style="width: 80px;">Close</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
   </div>
 
   <script>
+    // State Management
     const state = {
-      file1Text: '',
-      file2Text: '',
+      fileText: '',
       nodes: [],
       boardOutline: [],
-      currentSide: 'TOP',
+      currentSide: 'BOTTOM',
       visibility: {
         topPins: true,
         bottomPins: true,
@@ -386,12 +538,13 @@
         bottomComp: true,
         boardOutline: true
       },
-      bounds: { minX: 0, maxX: 1000, minY: 0, maxY: 1000 },
+      bounds: { minX: 0, maxX: 100000, minY: 0, maxY: 100000 },
       transform: { x: 0, y: 0, scale: 1 },
       isDragging: false,
       dragStart: { x: 0, y: 0 },
       selectedPin: null,
-      highlightedNode: null
+      highlightedNode: null,
+      previousTransforms: []
     };
 
     let dragStartPos = { x: 0, y: 0 };
@@ -411,6 +564,7 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
+    // Parsing Board Files (.xy / .file)
     function parseBoardXY(text) {
       const nodes = [];
       const outline = [];
@@ -427,8 +581,7 @@
           currentNode = null;
           const parts = trimmed.split(/\s+/);
           if (parts.length > 1) {
-            const rest = parts.slice(1).join(' ');
-            const matches = rest.matchAll(/(-?\d+),\s*(-?\d+)/g);
+            const matches = parts.slice(1).join(' ').matchAll(/(-?\d+),\s*(-?\d+)/g);
             for (const m of matches) {
               outline.push({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) });
             }
@@ -439,22 +592,15 @@
         if (trimmed.startsWith('NODE')) {
           parsingOutline = false;
           const parts = trimmed.split(/\s+/);
-          currentNode = {
-            name: parts[1] || 'UNKNOWN',
-            pins: []
-          };
+          currentNode = { name: parts[1] || 'UNKNOWN', pins: [] };
           nodes.push(currentNode);
           continue;
         }
 
         if (parsingOutline) {
-          if (trimmed.includes(';') || trimmed.startsWith('NODE')) {
-            parsingOutline = false;
-          }
+          if (trimmed.includes(';') || trimmed.startsWith('NODE')) parsingOutline = false;
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)/);
-          if (coordMatch) {
-            outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
-          }
+          if (coordMatch) outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
         } else if (currentNode) {
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
@@ -463,19 +609,16 @@
             const meta = coordMatch[3] || '';
             const isTop = meta.includes('TOP');
             const isBottom = meta.includes('BOTTOM');
-            
             const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
             const compRef = compMatch ? compMatch[1] : '';
             const partsComp = compRef.split('.');
 
             currentNode.pins.push({
-              x,
-              y,
+              x, y,
               side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
               ref: compRef,
               component: partsComp[0] || compRef,
               pinNum: partsComp[1] || '',
-              rawMeta: meta,
               nodeName: currentNode.name
             });
           }
@@ -507,14 +650,11 @@
         });
       }
 
-      if (minX === Infinity) {
-        minX = 0; maxX = 50000; minY = -10000; maxY = 30000;
-      }
+      if (minX === Infinity) { minX = 0; maxX = 100000; minY = 0; maxY = 100000; }
 
       state.bounds = { minX, maxX, minY, maxY };
       document.getElementById('statNodes').innerText = nodes.length;
       document.getElementById('statPins').innerText = pinCount;
-
       resetView();
     }
 
@@ -522,25 +662,14 @@
       const margin = 40;
       const boardWidth = state.bounds.maxX - state.bounds.minX;
       const boardHeight = state.bounds.maxY - state.bounds.minY;
-
       if (boardWidth <= 0 || boardHeight <= 0) return;
 
       const scaleX = (mainCanvas.width - margin * 2) / boardWidth;
       const scaleY = (mainCanvas.height - margin * 2) / boardHeight;
       state.transform.scale = Math.min(scaleX, scaleY);
-
       state.transform.x = margin + (mainCanvas.width - margin * 2 - boardWidth * state.transform.scale) / 2 - state.bounds.minX * state.transform.scale;
       state.transform.y = margin + (mainCanvas.height - margin * 2 - boardHeight * state.transform.scale) / 2 - state.bounds.minY * state.transform.scale;
-      
       render();
-    }
-
-    function processFiles() {
-      const combinedText = state.file1Text + '\n' + state.file2Text;
-      const parsedData = parseBoardXY(combinedText);
-      state.nodes = parsedData.nodes;
-      state.boardOutline = parsedData.outline;
-      calculateBounds(state.nodes, state.boardOutline);
     }
 
     document.getElementById('fileInput1').addEventListener('change', (e) => {
@@ -549,29 +678,19 @@
       document.getElementById('file1Status').innerText = file.name;
       const reader = new FileReader();
       reader.onload = (evt) => {
-        state.file1Text = evt.target.result;
-        processFiles();
+        state.fileText = evt.target.result;
+        const parsed = parseBoardXY(state.fileText);
+        state.nodes = parsed.nodes;
+        state.boardOutline = parsed.outline;
+        calculateBounds(state.nodes, state.boardOutline);
       };
       reader.readAsText(file);
     });
 
-    document.getElementById('fileInput2').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      document.getElementById('file2Status').innerText = file.name;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        state.file2Text = evt.target.result;
-        processFiles();
-      };
-      reader.readAsText(file);
-    });
-
+    // Render Canvas Routine
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
-
-      drawGrid(mainCtx, mainCanvas.width, mainCanvas.height);
 
       mainCtx.save();
       mainCtx.translate(state.transform.x, state.transform.y);
@@ -586,10 +705,10 @@
         mainCtx.scale(state.transform.scale, flipY * state.transform.scale);
       }
 
+      // 1. Board Outline
       if (state.visibility.boardOutline) {
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
-        
         if (state.boardOutline && state.boardOutline.length > 0) {
           mainCtx.beginPath();
           mainCtx.moveTo(state.boardOutline[0].x, state.boardOutline[0].y);
@@ -600,10 +719,11 @@
           mainCtx.stroke();
         } else {
           const b = state.bounds;
-          mainCtx.strokeRect(b.minX - 500, b.minY - 500, (b.maxX - b.minX) + 1000, (b.maxY - b.minY) + 1000);
+          mainCtx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
         }
       }
 
+      // Highlighted Net Connections
       if (state.highlightedNode) {
         mainCtx.strokeStyle = '#f59e0b';
         mainCtx.lineWidth = 2.5 / state.transform.scale;
@@ -620,11 +740,11 @@
         }
       }
 
+      // 2. Pins & Components
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
           const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
-
           const showTop = isTopPin && state.visibility.topPins;
           const showBottom = isBottomPin && state.visibility.bottomPins;
 
@@ -632,67 +752,31 @@
 
           const isSelected = (state.selectedPin === pin);
           const isConnected = (state.highlightedNode === node);
-          const pinRadius = (isSelected || isConnected) ? 350 : 180;
+          const pinRadius = 180;
 
-          if (showTop && showBottom) {
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, pinRadius, Math.PI / 2, Math.PI * 1.5, false);
-            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#38bdf8';
-            mainCtx.fill();
-
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, pinRadius, Math.PI * 1.5, Math.PI / 2, false);
-            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#f43f5e';
-            mainCtx.fill();
-          } else if (showTop) {
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
-            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#38bdf8';
-            mainCtx.fill();
-          } else if (showBottom) {
-            mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
-            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#f43f5e';
-            mainCtx.fill();
-          }
+          mainCtx.beginPath();
+          mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
+          mainCtx.fillStyle = isConnected ? '#f59e0b' : (pin.side === 'TOP' ? '#38bdf8' : '#f43f5e');
+          mainCtx.fill();
 
           if (isSelected) {
             mainCtx.strokeStyle = '#ffffff';
-            mainCtx.lineWidth = 4 / state.transform.scale;
+            mainCtx.lineWidth = 3 / state.transform.scale;
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 400, 0, Math.PI * 2);
+            mainCtx.arc(pin.x, pin.y, 300, 0, Math.PI * 2);
             mainCtx.stroke();
           }
 
-          if (pin.ref) {
-            const showTopComp = isTopPin && state.visibility.topComp;
-            const showBottomComp = isBottomPin && state.visibility.bottomComp;
-
-            if (showTopComp || showBottomComp) {
-              mainCtx.strokeStyle = showTopComp ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
-              mainCtx.lineWidth = 1 / state.transform.scale;
-              mainCtx.strokeRect(pin.x - 200, pin.y - 200, 400, 400);
-            }
+          if (pin.ref && (state.visibility.topComp || state.visibility.bottomComp)) {
+            mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            mainCtx.lineWidth = 1 / state.transform.scale;
+            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
           }
         });
       });
 
       mainCtx.restore();
       renderOverview();
-    }
-
-    function drawGrid(ctx, width, height) {
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
-      const gridSize = 40;
-      ctx.beginPath();
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.moveTo(x, 0); ctx.lineTo(x, height);
-      }
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.moveTo(0, y); ctx.lineTo(width, y);
-      }
-      ctx.stroke();
     }
 
     function renderOverview() {
@@ -703,71 +787,36 @@
       const b = state.bounds;
       const boardW = b.maxX - b.minX;
       const boardH = b.maxY - b.minY;
-
       if (boardW <= 0 || boardH <= 0) return;
 
-      const pad = 0.05;
-      const scale = Math.min((w * (1 - pad)) / boardW, (h * (1 - pad)) / boardH);
+      const scale = Math.min(w / boardW, h / boardH);
       const offsetX = (w - boardW * scale) / 2;
       const offsetY = (h - boardH * scale) / 2;
-
-      function worldToMinimap(wx, wy) {
-        const mx = offsetX + (wx - b.minX) * scale;
-        const my = h - (offsetY + (wy - b.minY) * scale);
-        return { x: mx, y: my };
-      }
 
       overviewCtx.strokeStyle = '#334155';
       if (state.boardOutline && state.boardOutline.length > 0) {
         overviewCtx.beginPath();
         for (let i = 0; i < state.boardOutline.length; i++) {
-          const pt = worldToMinimap(state.boardOutline[i].x, state.boardOutline[i].y);
-          if (i === 0) overviewCtx.moveTo(pt.x, pt.y);
-          else overviewCtx.lineTo(pt.x, pt.y);
+          const mx = offsetX + (state.boardOutline[i].x - b.minX) * scale;
+          const my = h - (offsetY + (state.boardOutline[i].y - b.minY) * scale);
+          if (i === 0) overviewCtx.moveTo(mx, my);
+          else overviewCtx.lineTo(mx, my);
         }
         overviewCtx.closePath();
         overviewCtx.stroke();
-      } else {
-        overviewCtx.strokeRect(offsetX, offsetY, boardW * scale, boardH * scale);
       }
 
       overviewCtx.fillStyle = '#38bdf8';
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const pt = worldToMinimap(pin.x, pin.y);
-          overviewCtx.fillRect(pt.x, pt.y, 1.5, 1.5);
+          const mx = offsetX + (pin.x - b.minX) * scale;
+          const my = h - (offsetY + (pin.y - b.minY) * scale);
+          overviewCtx.fillRect(mx, my, 1, 1);
         });
       });
-
-      function screenToWorld(sx, sy) {
-        const wx = (sx - state.transform.x) / state.transform.scale;
-        let wy = (sy - state.transform.y) / state.transform.scale;
-        if (state.currentSide === 'BOTTOM') {
-          const centerY = (b.minY + b.maxY) / 2;
-          wy = centerY - (wy - centerY);
-        }
-        return { x: wx, y: wy };
-      }
-
-      const tl = screenToWorld(0, 0);
-      const br = screenToWorld(mainCanvas.width, mainCanvas.height);
-
-      const vpMinX = Math.min(tl.x, br.x);
-      const vpMaxX = Math.max(tl.x, br.x);
-      const vpMinY = Math.min(tl.y, br.y);
-      const vpMaxY = Math.max(tl.y, br.y);
-
-      const mm1 = worldToMinimap(vpMinX, vpMaxY);
-      const mm2 = worldToMinimap(vpMaxX, vpMinY);
-
-      overviewCtx.strokeStyle = '#f59e0b';
-      overviewCtx.lineWidth = 1.5;
-      overviewCtx.strokeRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
-      overviewCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
-      overviewCtx.fillRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
     }
 
-    // FIXED HIT TEST: Inverted transformation map aligned perfectly with render matrix
+    // Hit-test mapping for pin clicks
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
@@ -775,112 +824,38 @@
 
       let worldX = (clickX - state.transform.x) / state.transform.scale;
       let worldY = (clickY - state.transform.y) / state.transform.scale;
-      
       if (state.currentSide === 'BOTTOM') {
         const centerY = (state.bounds.minY + state.bounds.maxY) / 2;
         worldY = centerY - (worldY - centerY);
       }
 
-      let closestPin = null;
-      let minDistance = 600 / state.transform.scale; // Generous hit radius for click ease
+      let closest = null;
+      let minDist = 800 / state.transform.scale;
 
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
-          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
-          const isVisible = (state.currentSide === 'TOP' && isTopPin && state.visibility.topPins) || 
-                            (state.currentSide === 'BOTTOM' && isBottomPin && state.visibility.bottomPins);
-
-          if (!isVisible) return;
-
           const dist = Math.hypot(pin.x - worldX, pin.y - worldY);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestPin = { pin, node };
+          if (dist < minDist) {
+            minDist = dist;
+            closest = { pin, node, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
           }
         });
       });
-
-      return closestPin;
+      return closest;
     }
 
-    function handleLeftClick(e) {
-      const hit = getPinAtMouse(e.clientX, e.clientY);
-      const infoBox = document.getElementById('infoBox');
-
-      if (hit) {
-        state.selectedPin = hit.pin;
-        state.highlightedNode = null;
-        
-        document.getElementById('infoComp').innerText = hit.pin.component || 'N/A';
-        document.getElementById('infoPinNum').innerText = hit.pin.pinNum || 'N/A';
-        document.getElementById('infoNode').innerText = hit.node.name;
-        document.getElementById('infoSide').innerText = hit.pin.side;
-        document.getElementById('infoCoords').innerText = `X: ${hit.pin.x}, Y: ${hit.pin.y}`;
-        
-        const connectionsText = hit.node.pins.map(p => p.ref || 'Pin').join(', ');
-        document.getElementById('infoConnections').innerText = `${hit.node.name} = [ ${connectionsText} ]`;
-        
-        infoBox.style.display = 'block';
-        render();
-      } else {
-        infoBox.style.display = 'none';
-        state.selectedPin = null;
-        render();
-      }
-    }
-
-    viewport.addEventListener('contextmenu', (e) => {
-      e.preventDefault(); 
-      const hit = getPinAtMouse(e.clientX, e.clientY);
-      const infoBox = document.getElementById('infoBox');
-
-      if (hit) {
-        state.selectedPin = hit.pin;
-        state.highlightedNode = hit.node; 
-
-        document.getElementById('infoComp').innerText = hit.pin.component || 'N/A';
-        document.getElementById('infoPinNum').innerText = hit.pin.pinNum || 'N/A';
-        document.getElementById('infoNode').innerText = hit.node.name;
-        document.getElementById('infoSide').innerText = hit.pin.side;
-        document.getElementById('infoCoords').innerText = `X: ${hit.pin.x}, Y: ${hit.pin.y}`;
-
-        const connectionsText = hit.node.pins.map(p => p.ref || 'Pin').join(', ');
-        document.getElementById('infoConnections').innerText = `Connected Net:\n${hit.node.name} = [ ${connectionsText} ]`;
-
-        infoBox.style.display = 'block';
-        render();
-      } else {
-        state.highlightedNode = null;
-        state.selectedPin = null;
-        infoBox.style.display = 'none';
-        render();
-      }
-    });
-
-    document.getElementById('closeInfoBox').addEventListener('click', () => {
-      document.getElementById('infoBox').style.display = 'none';
-      state.selectedPin = null;
-      state.highlightedNode = null;
-      render();
-    });
-
+    // Mouse Interactions & Event Handlers
     viewport.addEventListener('mousedown', (e) => {
-      if (e.button === 0) {
-        state.isDragging = true;
-        state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
-        dragStartPos = { x: e.clientX, y: e.clientY };
-      }
+      state.isDragging = true;
+      state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
+      dragStartPos = { x: e.clientX, y: e.clientY };
     });
 
-    viewport.addEventListener('click', (e) => {
-      const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
-      if (dist < 5) {
-        handleLeftClick(e);
+    viewport.addEventListener('mousemove', (e) => {
+      const hit = getPinAtMouse(e.clientX, e.clientY);
+      if (hit) {
+        document.getElementById('cursorCoords').innerText = `Cursor: ${hit.worldX}, ${hit.worldY} Tenth Mils`;
       }
-    });
-
-    window.addEventListener('mousemove', (e) => {
       if (!state.isDragging) return;
       state.transform.x = e.clientX - state.dragStart.x;
       state.transform.y = e.clientY - state.dragStart.y;
@@ -889,39 +864,89 @@
 
     window.addEventListener('mouseup', () => state.isDragging = false);
 
+    // Left Click: Updates Notes Box
+    viewport.addEventListener('click', (e) => {
+      const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+      if (dist < 5) {
+        const hit = getPinAtMouse(e.clientX, e.clientY);
+        if (hit) {
+          state.selectedPin = hit.pin;
+          document.getElementById('notesBox').innerText = `Notes: The location (${hit.worldX}, ${hit.worldY}) on the node "${hit.node.name}" has been selected.`;
+          render();
+        }
+      }
+    });
+
+    // Right Click: Opens Device Entry Form Popup Modal[span_0](start_span)[span_0](end_span)
+    viewport.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const hit = getPinAtMouse(e.clientX, e.clientY);
+      if (hit) {
+        state.selectedPin = hit.pin;
+        state.highlightedNode = hit.node;
+
+        // Populate Device Entry Form
+        document.getElementById('modalDesignator').value = hit.pin.component || 'u901';
+        
+        const tbody = document.getElementById('modalPinTableBody');
+        tbody.innerHTML = '';
+        hit.node.pins.forEach(p => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${p.pinNum || '1'}</td><td>${p.nodeName}</td><td>No Probe</td><td>${p.side}</td>`;
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('deviceEntryModal').style.display = 'block';
+        render();
+      }
+    });
+
+    document.getElementById('modalCloseBtn').addEventListener('click', () => {
+      document.getElementById('deviceEntryModal').style.display = 'none';
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('deviceEntryModal').style.display = 'none';
+    });
+
+    // Button Controls Event Listeners
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      state.transform.scale *= 1.25;
+      render();
+    });
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      state.transform.scale *= 0.8;
+      render();
+    });
+    document.getElementById('btnFullView').addEventListener('click', resetView);
+    document.getElementById('btnRedraw').addEventListener('click', render);
+    
+    document.getElementById('btnClearHighlights').addEventListener('click', () => {
+      state.highlightedNode = null;
+      state.selectedPin = null;
+      document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
+      render();
+    });
+
+    document.getElementById('viewSideSelect').addEventListener('change', (e) => {
+      state.currentSide = e.target.value;
+      render();
+    });
+
     viewport.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-
       const mouseX = e.clientX - viewport.offsetLeft;
       const mouseY = e.clientY - viewport.offsetTop;
-
       state.transform.x = mouseX - (mouseX - state.transform.x) * zoomFactor;
       state.transform.y = mouseY - (mouseY - state.transform.y) * zoomFactor;
       state.transform.scale *= zoomFactor;
-
       render();
     }, { passive: false });
 
-    document.getElementById('btnTopView').addEventListener('click', () => {
-      state.currentSide = 'TOP';
-      document.getElementById('btnTopView').classList.add('active');
-      document.getElementById('btnBottomView').classList.remove('active');
-      render();
-    });
-
-    document.getElementById('btnBottomView').addEventListener('click', () => {
-      state.currentSide = 'BOTTOM';
-      document.getElementById('btnBottomView').classList.add('active');
-      document.getElementById('btnTopView').classList.remove('active');
-      render();
-    });
-
-    document.getElementById('chkTopPins').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
-    document.getElementById('chkBottomPins').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
+    // Checkbox Feature Toggles
+    document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
     document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
-    document.getElementById('chkBoardOutline').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
 
     resizeCanvas();
   </script>
