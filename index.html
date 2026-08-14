@@ -120,7 +120,7 @@
       background: var(--agilent-panel);
       border: 2px solid;
       border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
-      padding: 4px 8px;
+      padding: 6px 8px;
       text-align: center;
       font-size: 11px;
       cursor: pointer;
@@ -130,7 +130,7 @@
 
     .win-btn:active {
       border-color: var(--agilent-border-dark) var(--agilent-border-light) var(--agilent-border-light) var(--agilent-border-dark);
-      padding: 5px 7px 3px 9px;
+      padding: 7px 7px 5px 9px;
     }
 
     .win-btn.active {
@@ -380,23 +380,17 @@
         <div id="notesBox">Notes: No object was selected.</div>
       </div>
 
-      <!-- File Loading Box -->
+      <!-- Single Folder Selection Box -->
       <fieldset class="win-groupbox">
-        <legend>Load Board Files</legend>
+        <legend>Load Board Model Folder</legend>
         <div style="display: flex; flex-direction: column; gap: 6px;">
-          <!-- 1. Board Layout File -->
-          <label class="win-btn" style="text-align: center;">
-            1. Select Layout File (.file / board_xy)
-            <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
+          <label class="win-btn" style="text-align: center; background: #000080; color: white;">
+            📁 Select Board Model Folder
+            <input type="file" id="folderInput" webkitdirectory directory multiple>
           </label>
-          <div id="file1Status" style="font-size: 10px; color: #404040; word-break: break-all;">Layout file: None</div>
-
-          <!-- 2. Board Netlist File -->
-          <label class="win-btn" style="text-align: center; background: #e2e8f0;">
-            2. Select Netlist File (board)
-            <input type="file" id="fileInput2" accept=".board,.txt,*">
-          </label>
-          <div id="file2Status" style="font-size: 10px; color: #047857; font-weight: bold; word-break: break-all;">Netlist file: None (Optional)</div>
+          <div id="folderStatus" style="font-size: 10px; color: #333; word-break: break-all; line-height: 1.4;">
+            No folder selected.<br><i>Click above and pick any model folder!</i>
+          </div>
         </div>
       </fieldset>
 
@@ -643,7 +637,7 @@
       return devNetMap;
     }
 
-    // Parsing Agilent 3070 Board Files (.xy / .file)
+    // Parsing Agilent 3070 Board Layout File (board_xy)
     function parseBoardXY(text) {
       const nodes = [];
       const outline = [];
@@ -810,7 +804,7 @@
 
     // Merge Netlist Map into Layout Pins
     function applyNetlistToPins() {
-      if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return;
+      if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return 0;
 
       let mappedCount = 0;
       state.allPins.forEach(pin => {
@@ -833,9 +827,8 @@
         }
       });
 
-      document.getElementById('file2Status').innerText = `Netlist loaded: (${mappedCount} pins mapped accurately)`;
       document.getElementById('statNodes').innerText = state.nodes.length;
-      render();
+      return mappedCount;
     }
 
     function calculateBounds(allPins, outline = []) {
@@ -879,14 +872,34 @@
       render();
     }
 
-    // 1. Layout File Loader
-    document.getElementById('fileInput1').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      document.getElementById('file1Status').innerText = 'Layout: ' + file.name;
-      document.getElementById('appTitleBar').querySelector('span').innerText = 'Agilent Board Graphics Viewer: ' + file.name;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
+    // AUTOMATIC SINGLE FOLDER PARSER
+    document.getElementById('folderInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      // Extract Model Folder Name from path
+      const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : 'Selected Model';
+
+      // 1. Search for 'board_xy' layout file
+      let xyFile = files.find(f => f.name.toLowerCase() === 'board_xy') ||
+                   files.find(f => f.name.toLowerCase().endsWith('.xy')) ||
+                   files.find(f => f.name.toLowerCase().endsWith('.file'));
+
+      // 2. Search for 'board' netlist file (Exact match preferred to avoid board.o or board_xy)
+      let boardFile = files.find(f => f.name.toLowerCase() === 'board') ||
+                      files.find(f => f.name.toLowerCase().endsWith('.board'));
+
+      if (!xyFile) {
+        document.getElementById('folderStatus').innerHTML = `<span style="color:red; font-weight:bold;">❌ Error: 'board_xy' layout file not found in "${folderName}".</span>`;
+        return;
+      }
+
+      document.getElementById('appTitleBar').querySelector('span').innerText = 'Agilent Board Graphics Viewer: ' + folderName;
+      document.getElementById('folderStatus').innerHTML = `⏳ Loading <b>${folderName}</b>...`;
+
+      // Read Layout 'board_xy'
+      const readerXY = new FileReader();
+      readerXY.onload = (evt) => {
         state.fileText = evt.target.result;
         const parsed = parseBoardXY(state.fileText);
         state.nodes = parsed.nodes;
@@ -895,22 +908,26 @@
         state.allPins = parsed.allPins;
         state.boardOutline = parsed.outline;
 
-        applyNetlistToPins();
-        calculateBounds(state.allPins, state.boardOutline);
-      };
-      reader.readAsText(file);
-    });
+        let statusText = `<b>Folder: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
 
-    // 2. Netlist File Loader (board)
-    document.getElementById('fileInput2').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        state.netlistMap = parseBoardNetlist(evt.target.result);
-        applyNetlistToPins();
+        // If 'board' netlist exists, read it
+        if (boardFile) {
+          const readerBoard = new FileReader();
+          readerBoard.onload = (bEvt) => {
+            state.netlistMap = parseBoardNetlist(bEvt.target.result);
+            const mappedCount = applyNetlistToPins();
+            statusText += `<br>✓ Netlist: <code>${boardFile.name}</code> (${mappedCount} nets mapped)`;
+            document.getElementById('folderStatus').innerHTML = statusText;
+            calculateBounds(state.allPins, state.boardOutline);
+          };
+          readerBoard.readAsText(boardFile);
+        } else {
+          statusText += `<br><span style="color:#666;">⚠ Netlist: 'board' file not found</span>`;
+          document.getElementById('folderStatus').innerHTML = statusText;
+          calculateBounds(state.allPins, state.boardOutline);
+        }
       };
-      reader.readAsText(file);
+      readerXY.readAsText(xyFile);
     });
 
     // Render Canvas Routine
