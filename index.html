@@ -817,8 +817,7 @@
         if (pin.y > maxY) maxY = pin.y;
       });
 
-      // Add padding around the outermost pin coordinates (300 Tenth Mils)
-      const pad = 300;
+      const pad = 200;
       const width = (maxX - minX) + (pad * 2);
       const height = (maxY - minY) + (pad * 2);
 
@@ -1013,9 +1012,9 @@
         }
       }
 
-      // 4. Pins
-      const pinWidth = 360;
-      const pinHeight = 360;
+      // 4. Pins (120x120 size prevents BGA pins from merging into solid blocks)
+      const pinWidth = 120;
+      const pinHeight = 120;
       const halfW = pinWidth / 2;
       const halfH = pinHeight / 2;
 
@@ -1043,7 +1042,7 @@
         if (state.selectedPin === pin) {
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 3 / state.transform.scale;
-          mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
+          mainCtx.strokeRect(pin.x - 150, pin.y - 150, 300, 300);
         }
       });
 
