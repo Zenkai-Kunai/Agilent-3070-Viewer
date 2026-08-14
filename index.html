@@ -246,7 +246,7 @@
       left: 0;
     }
 
-    /* Classic Windows Dialog Modal Popup (Device Entry Form) */
+    /* Classic Windows Dialog Modal Popup (Device Entry Form) - Moveable */
     #deviceEntryModal {
       position: absolute;
       top: 50%;
@@ -269,6 +269,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: move;
     }
 
     .modal-body {
@@ -347,8 +348,8 @@
 <body>
 
   <!-- App Title Bar -->
-  <div class="app-titlebar">
-    <span>Agilent Board Graphics Viewer: /I=/Keysight/Torredo_Main_344XX-66551/</span>
+  <div class="app-titlebar" id="appTitleBar">
+    <span>Agilent Board Graphics Viewer</span>
     <div class="window-controls">
       <span>_</span><span>□</span><span>×</span>
     </div>
@@ -420,8 +421,8 @@
           <div style="text-align: center;"><input type="checkbox" id="chkTopTooling"></div>
 
           <div>X-Y Locations</div>
-          <div style="text-align: center;"><input type="checkbox" id="chkBottomXY"></div>
-          <div style="text-align: center;"><input type="checkbox" id="chkTopXY"></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkBottomXY" checked></div>
+          <div style="text-align: center;"><input type="checkbox" id="chkTopXY" checked></div>
 
           <div>Device Outlines</div>
           <div style="text-align: center;"><input type="checkbox" id="chkBottomComp" checked></div>
@@ -438,6 +439,23 @@
         <legend>Overview</legend>
         <div id="overview-container">
           <canvas id="overviewCanvas"></canvas>
+        </div>
+      </fieldset>
+
+      <!-- Search Section (Device & Node) -->
+      <fieldset class="win-groupbox">
+        <legend>Search Location</legend>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <span style="width: 50px;">Device:</span>
+            <input type="text" id="searchDeviceInput" placeholder="e.g. u901" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
+            <button class="win-btn" id="btnSearchDevice" style="padding: 2px 6px;">Find</button>
+          </div>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <span style="width: 50px;">Node:</span>
+            <input type="text" id="searchNodeInput" placeholder="e.g. AGND" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
+            <button class="win-btn" id="btnSearchNode" style="padding: 2px 6px;">Find</button>
+          </div>
         </div>
       </fieldset>
 
@@ -464,9 +482,9 @@
       <div id="viewport">
         <canvas id="mainCanvas"></canvas>
 
-        <!-- Device Entry Form Popup Modal (Shown on Right Click) -->
+        <!-- Device Entry Form Popup Modal (Moveable) -->
         <div id="deviceEntryModal">
-          <div class="modal-titlebar">
+          <div class="modal-titlebar" id="modalTitleBar">
             <span>Device Entry Form</span>
             <span style="cursor: pointer; padding: 0 4px;" id="closeModalBtn">✕</span>
           </div>
@@ -676,6 +694,7 @@
       const file = e.target.files[0];
       if (!file) return;
       document.getElementById('file1Status').innerText = file.name;
+      document.getElementById('appTitleBar').querySelector('span').innerText = 'Agilent Board Graphics Viewer: ' + file.name;
       const reader = new FileReader();
       reader.onload = (evt) => {
         state.fileText = evt.target.result;
@@ -745,21 +764,43 @@
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
           const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
-          const showTop = isTopPin && state.visibility.topPins;
-          const showBottom = isBottomPin && state.visibility.bottomPins;
+          
+          const showTopPin = isTopPin && state.visibility.topPins;
+          const showBottomPin = isBottomPin && state.visibility.bottomPins;
 
-          if (!showTop && !showBottom) return;
+          const showTopComp = isTopPin && state.visibility.topComp;
+          const showBottomComp = isBottomPin && state.visibility.bottomComp;
 
-          const isSelected = (state.selectedPin === pin);
-          const isConnected = (state.highlightedNode === node);
-          const pinRadius = 180;
+          // Render Pins (X-Y Locations) Independently
+          if (showTopPin && pin.side === 'TOP') {
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
+            mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
+            mainCtx.fill();
+          }
+          if (showBottomPin && pin.side === 'BOTTOM') {
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 180, 0, Math.PI * 2);
+            mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#f43f5e';
+            mainCtx.fill();
+          }
+          if (pin.side === 'BOTH') {
+            if (showTopPin) {
+              mainCtx.beginPath();
+              mainCtx.arc(pin.x, pin.y, 180, Math.PI / 2, Math.PI * 1.5, false);
+              mainCtx.fillStyle = '#38bdf8';
+              mainCtx.fill();
+            }
+            if (showBottomPin) {
+              mainCtx.beginPath();
+              mainCtx.arc(pin.x, pin.y, 180, Math.PI * 1.5, Math.PI / 2, false);
+              mainCtx.fillStyle = '#f43f5e';
+              mainCtx.fill();
+            }
+          }
 
-          mainCtx.beginPath();
-          mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
-          mainCtx.fillStyle = isConnected ? '#f59e0b' : (pin.side === 'TOP' ? '#38bdf8' : '#f43f5e');
-          mainCtx.fill();
-
-          if (isSelected) {
+          // Render Selected Pin Indicator Ring
+          if (state.selectedPin === pin) {
             mainCtx.strokeStyle = '#ffffff';
             mainCtx.lineWidth = 3 / state.transform.scale;
             mainCtx.beginPath();
@@ -767,10 +808,17 @@
             mainCtx.stroke();
           }
 
-          if (pin.ref && (state.visibility.topComp || state.visibility.bottomComp)) {
-            mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+          // Render Independent Device Outlines
+          if (pin.ref) {
             mainCtx.lineWidth = 1 / state.transform.scale;
-            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
+            if (showTopComp && (pin.side === 'TOP' || pin.side === 'BOTH')) {
+              mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+              mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
+            }
+            if (showBottomComp && (pin.side === 'BOTTOM' || pin.side === 'BOTH')) {
+              mainCtx.strokeStyle = 'rgba(244, 63, 94, 0.5)';
+              mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
+            }
           }
         });
       });
@@ -816,25 +864,30 @@
       });
     }
 
-    // Hit-test mapping for pin clicks
+    // Precise Hit-test mapping for pin clicks (eliminates ghost touch)
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
       const clickY = clientY - rect.top;
 
-      let worldX = (clickX - state.transform.x) / state.transform.scale;
-      let worldY = (clickY - state.transform.y) / state.transform.scale;
-      if (state.currentSide === 'BOTTOM') {
-        const centerY = (state.bounds.minY + state.bounds.maxY) / 2;
-        worldY = centerY - (worldY - centerY);
-      }
-
       let closest = null;
-      let minDist = 800 / state.transform.scale;
+      let minDist = 25; // screen pixels threshold
+
+      const scale = state.transform.scale;
+      const tx = state.transform.x;
+      const ty = state.transform.y;
 
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const dist = Math.hypot(pin.x - worldX, pin.y - worldY);
+          let screenX, screenY;
+          if (state.currentSide === 'BOTTOM') {
+            screenX = pin.x * scale + tx;
+            screenY = pin.y * scale + ty;
+          } else {
+            screenX = pin.x * scale + tx;
+            screenY = -pin.y * scale + ty;
+          }
+          const dist = Math.hypot(screenX - clickX, screenY - clickY);
           if (dist < minDist) {
             minDist = dist;
             closest = { pin, node, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
@@ -877,7 +930,7 @@
       }
     });
 
-    // Right Click: Opens Device Entry Form Popup Modal[span_0](start_span)[span_0](end_span)
+    // Right Click: Opens Device Entry Form Popup Modal
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getPinAtMouse(e.clientX, e.clientY);
@@ -885,7 +938,6 @@
         state.selectedPin = hit.pin;
         state.highlightedNode = hit.node;
 
-        // Populate Device Entry Form
         document.getElementById('modalDesignator').value = hit.pin.component || 'u901';
         
         const tbody = document.getElementById('modalPinTableBody');
@@ -907,6 +959,78 @@
     document.getElementById('closeModalBtn').addEventListener('click', () => {
       document.getElementById('deviceEntryModal').style.display = 'none';
     });
+
+    // Make Device Entry Form Modal Moveable (Draggable)
+    const modal = document.getElementById('deviceEntryModal');
+    const modalTitleBar = document.getElementById('modalTitleBar');
+    let isModalDragging = false;
+    let modalDragOffset = { x: 0, y: 0 };
+
+    modalTitleBar.addEventListener('mousedown', (e) => {
+      isModalDragging = true;
+      modalDragOffset.x = e.clientX - modal.offsetLeft;
+      modalDragOffset.y = e.clientY - modal.offsetTop;
+      modal.style.transform = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isModalDragging) return;
+      modal.style.left = (e.clientX - modalDragOffset.x) + 'px';
+      modal.style.top = (e.clientY - modalDragOffset.y) + 'px';
+    });
+
+    window.addEventListener('mouseup', () => {
+      isModalDragging = false;
+    });
+
+    // Search Features (Device & Node Search)
+    function searchDevice() {
+      const query = document.getElementById('searchDeviceInput').value.trim().toLowerCase();
+      if (!query) return;
+      let foundPin = null;
+      for (const node of state.nodes) {
+        for (const pin of node.pins) {
+          if (pin.component && pin.component.toLowerCase() === query) {
+            foundPin = pin;
+            state.selectedPin = pin;
+            state.highlightedNode = node;
+            break;
+          }
+        }
+        if (foundPin) break;
+      }
+      if (foundPin) {
+        document.getElementById('notesBox').innerText = `Notes: Component location "${query.toUpperCase()}" has been highlighted.`;
+        render();
+      } else {
+        document.getElementById('notesBox').innerText = `Notes: Device "${query}" not found.`;
+      }
+    }
+
+    function searchNode() {
+      const query = document.getElementById('searchNodeInput').value.trim().toLowerCase();
+      if (!query) return;
+      let foundNode = null;
+      for (const node of state.nodes) {
+        if (node.name.toLowerCase() === query) {
+          foundNode = node;
+          break;
+        }
+      }
+      if (foundNode) {
+        state.highlightedNode = foundNode;
+        if (foundNode.pins.length > 0) state.selectedPin = foundNode.pins[0];
+        document.getElementById('notesBox').innerText = `Notes: Node pin location "${query.toUpperCase()}" has been highlighted.`;
+        render();
+      } else {
+        document.getElementById('notesBox').innerText = `Notes: Node "${query}" not found.`;
+      }
+    }
+
+    document.getElementById('btnSearchDevice').addEventListener('click', searchDevice);
+    document.getElementById('searchDeviceInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchDevice(); });
+    document.getElementById('btnSearchNode').addEventListener('click', searchNode);
+    document.getElementById('searchNodeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchNode(); });
 
     // Button Controls Event Listeners
     document.getElementById('btnZoomIn').addEventListener('click', () => {
@@ -943,8 +1067,10 @@
       render();
     }, { passive: false });
 
-    // Checkbox Feature Toggles
+    // Checkbox Feature Toggles (Independent Top/Bottom Pin & Device Outlines)
     document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
+    document.getElementById('chkTopXY').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
+    document.getElementById('chkBottomXY').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
     document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
 
