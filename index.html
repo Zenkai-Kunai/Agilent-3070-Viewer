@@ -509,7 +509,7 @@
               <label style="width: 90px;">Part Number:</label>
               <input type="text" id="modalPartNumber" value="tm4c1292ncpdti3r">
               <span style="font-weight: bold;">Placed:</span> <button class="win-btn" style="padding: 2px 8px;">Yes</button>
-              <span style="font-weight: bold;">Side Of Board:</span> <button class="win-btn" style="padding: 2px 8px;">Bottom</button>
+              <span style="font-weight: bold;">Side Of Board:</span> <button class="win-btn" id="modalSideBtn" style="padding: 2px 8px;">Bottom</button>
             </div>
 
             <!-- Pin Table View -->
@@ -547,6 +547,8 @@
     const state = {
       fileText: '',
       nodes: [],
+      components: {},
+      allPins: [],
       boardOutline: [],
       currentSide: 'BOTTOM',
       visibility: {
@@ -561,6 +563,7 @@
       isDragging: false,
       dragStart: { x: 0, y: 0 },
       selectedPin: null,
+      selectedComponent: null,
       highlightedNode: null,
       previousTransforms: []
     };
@@ -582,20 +585,63 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Parsing Board Files (.xy / .file)
+    // Parsing Agilent 3070 Board Files (.xy / .file)
     function parseBoardXY(text) {
       const nodes = [];
       const outline = [];
+      const components = {};
+      const deviceSideMap = {};
+      const allPins = [];
+      const nodeMap = {};
+
       const lines = text.split('\n');
+
+      // Pass 1: Pre-parse DEVICES section for default component sides
+      let inDevices = false;
+      for (let line of lines) {
+        let trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
+
+        if (/^DEVICES/i.test(trimmed)) {
+          inDevices = true;
+          continue;
+        }
+        if (inDevices) {
+          if (/^END/i.test(trimmed) || /^NODE/i.test(trimmed) || /^OTHER/i.test(trimmed) || /^OUTLINE/i.test(trimmed)) {
+            inDevices = false;
+          } else {
+            const devMatch = trimmed.match(/^([A-Z0-9_\-]+)\s+(TOP|BOTTOM);?/i);
+            if (devMatch) {
+              deviceSideMap[devMatch[1].toUpperCase()] = devMatch[2].toUpperCase();
+            }
+          }
+        }
+      }
+
+      function getOrCreateComponent(compName, defaultSide) {
+        const nameUpper = compName.toUpperCase();
+        if (!components[nameUpper]) {
+          const side = deviceSideMap[nameUpper] || defaultSide || 'BOTTOM';
+          components[nameUpper] = {
+            name: nameUpper,
+            side: side,
+            pins: []
+          };
+        }
+        return components[nameUpper];
+      }
+
+      // Pass 2: Parse OUTLINE, NODE, OTHER sections
+      let currentSection = null;
       let currentNode = null;
-      let parsingOutline = false;
 
       for (let line of lines) {
         let trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
 
+        // Section Headers
         if (/^(BOARD_)?OUTLINE/i.test(trimmed)) {
-          parsingOutline = true;
+          currentSection = 'OUTLINE';
           currentNode = null;
           const parts = trimmed.split(/\s+/);
           if (parts.length > 1) {
@@ -607,56 +653,134 @@
           continue;
         }
 
-        if (trimmed.startsWith('NODE')) {
-          parsingOutline = false;
-          const parts = trimmed.split(/\s+/);
-          currentNode = { name: parts[1] || 'UNKNOWN', pins: [] };
-          nodes.push(currentNode);
+        if (/^NODE\b/i.test(trimmed)) {
+          currentSection = 'NODE';
+          const match = trimmed.match(/^NODE\s+["']?([^"'\s;]+)["']?/i);
+          const nodeName = match ? match[1] : 'UNKNOWN';
+
+          if (!nodeMap[nodeName]) {
+            currentNode = { name: nodeName, pins: [] };
+            nodeMap[nodeName] = currentNode;
+            nodes.push(currentNode);
+          } else {
+            currentNode = nodeMap[nodeName];
+          }
           continue;
         }
 
-        if (parsingOutline) {
-          if (trimmed.includes(';') || trimmed.startsWith('NODE')) parsingOutline = false;
+        if (/^OTHER\b/i.test(trimmed)) {
+          currentSection = 'OTHER';
+          currentNode = null;
+          continue;
+        }
+
+        if (/^DEVICES\b/i.test(trimmed)) {
+          currentSection = 'DEVICES';
+          currentNode = null;
+          continue;
+        }
+
+        if (/^(UNITS|SCALE|END)\b/i.test(trimmed)) {
+          if (/^END\b/i.test(trimmed)) {
+            currentSection = null;
+            currentNode = null;
+          }
+          continue;
+        }
+
+        // Section Content
+        if (currentSection === 'OUTLINE') {
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)/);
-          if (coordMatch) outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
-        } else if (currentNode) {
+          if (coordMatch) {
+            outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
+          }
+        } else if (currentSection === 'NODE' || currentSection === 'OTHER') {
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
             const x = parseInt(coordMatch[1], 10);
             const y = parseInt(coordMatch[2], 10);
             const meta = coordMatch[3] || '';
-            const isTop = meta.includes('TOP');
-            const isBottom = meta.includes('BOTTOM');
-            const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
-            const compRef = compMatch ? compMatch[1] : '';
-            const partsComp = compRef.split('.');
 
-            currentNode.pins.push({
+            // Extract Component and Pin (e.g., U901.65, R101.1)
+            const compMatch = meta.match(/([A-Z0-9_\-]+)\.([A-Z0-9_\-]+)/i);
+            let compRef = '';
+            let componentName = '';
+            let pinNum = '';
+
+            if (compMatch) {
+              componentName = compMatch[1].toUpperCase();
+              pinNum = compMatch[2];
+              compRef = `${componentName}.${pinNum}`;
+            }
+
+            // Determine Side
+            let side = 'BOTTOM';
+            if (/\bTOP\b/i.test(meta)) {
+              side = 'TOP';
+            } else if (/\bBOTTOM\b/i.test(meta)) {
+              side = 'BOTTOM';
+            } else if (componentName && deviceSideMap[componentName]) {
+              side = deviceSideMap[componentName];
+            }
+
+            // Extract Access Type
+            let access = 'NO_PROBE';
+            if (/\bMANDATORY\b/i.test(meta)) access = 'MANDATORY';
+            else if (/\bCRITICAL\b/i.test(meta)) access = 'CRITICAL';
+
+            let nodeName = (currentNode && currentSection === 'NODE') ? currentNode.name : 'UNCONNECTED';
+
+            const pinObj = {
               x, y,
-              side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
+              side,
               ref: compRef,
-              component: partsComp[0] || compRef,
-              pinNum: partsComp[1] || '',
-              nodeName: currentNode.name
-            });
+              component: componentName,
+              pinNum: pinNum,
+              nodeName: nodeName,
+              access: access
+            };
+
+            if (currentNode && currentSection === 'NODE') {
+              currentNode.pins.push(pinObj);
+            }
+
+            if (componentName) {
+              const comp = getOrCreateComponent(componentName, side);
+              comp.pins.push(pinObj);
+            }
+
+            allPins.push(pinObj);
           }
         }
       }
-      return { nodes, outline };
+
+      // Pass 3: Proximity match component pins under OTHER to Node probe points
+      allPins.forEach(pin => {
+        if (pin.nodeName === 'UNCONNECTED') {
+          for (const node of nodes) {
+            for (const nPin of node.pins) {
+              if (Math.abs(nPin.x - pin.x) <= 50 && Math.abs(nPin.y - pin.y) <= 50) {
+                pin.nodeName = node.name;
+                node.pins.push(pin);
+                break;
+              }
+            }
+            if (pin.nodeName !== 'UNCONNECTED') break;
+          }
+        }
+      });
+
+      return { nodes, outline, components, allPins };
     }
 
-    function calculateBounds(nodes, outline = []) {
+    function calculateBounds(allPins, outline = []) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      let pinCount = 0;
 
-      nodes.forEach(node => {
-        node.pins.forEach(pin => {
-          pinCount++;
-          if (pin.x < minX) minX = pin.x;
-          if (pin.x > maxX) maxX = pin.x;
-          if (pin.y < minY) minY = pin.y;
-          if (pin.y > maxY) maxY = pin.y;
-        });
+      allPins.forEach(pin => {
+        if (pin.x < minX) minX = pin.x;
+        if (pin.x > maxX) maxX = pin.x;
+        if (pin.y < minY) minY = pin.y;
+        if (pin.y > maxY) maxY = pin.y;
       });
 
       if (outline && outline.length > 0) {
@@ -671,8 +795,8 @@
       if (minX === Infinity) { minX = 0; maxX = 100000; minY = 0; maxY = 100000; }
 
       state.bounds = { minX, maxX, minY, maxY };
-      document.getElementById('statNodes').innerText = nodes.length;
-      document.getElementById('statPins').innerText = pinCount;
+      document.getElementById('statNodes').innerText = state.nodes.length;
+      document.getElementById('statPins').innerText = allPins.length;
       resetView();
     }
 
@@ -700,8 +824,10 @@
         state.fileText = evt.target.result;
         const parsed = parseBoardXY(state.fileText);
         state.nodes = parsed.nodes;
+        state.components = parsed.components;
+        state.allPins = parsed.allPins;
         state.boardOutline = parsed.outline;
-        calculateBounds(state.nodes, state.boardOutline);
+        calculateBounds(state.allPins, state.boardOutline);
       };
       reader.readAsText(file);
     });
@@ -756,59 +882,47 @@
       const halfW = pinWidth / 2;
       const halfH = pinHeight / 2;
 
-      state.nodes.forEach(node => {
-        node.pins.forEach(pin => {
-          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
-          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
-          
-          const showTopPin = isTopPin && state.visibility.topPins;
-          const showBottomPin = isBottomPin && state.visibility.bottomPins;
+      state.allPins.forEach(pin => {
+        const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
+        const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
+        
+        const showTopPin = isTopPin && state.visibility.topPins;
+        const showBottomPin = isBottomPin && state.visibility.bottomPins;
 
-          const showTopComp = isTopPin && state.visibility.topComp;
-          const showBottomComp = isBottomPin && state.visibility.bottomComp;
+        const isHighlighted = (state.highlightedNode && pin.nodeName === state.highlightedNode.name) ||
+                              (state.selectedComponent && pin.component === state.selectedComponent.name);
 
-          // Render Rectangular Pins
-          if (showTopPin && pin.side === 'TOP') {
-            mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-            mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
+        // Draw Pins
+        if ((isTopPin && showTopPin) || (isBottomPin && showBottomPin)) {
+          if (isHighlighted) {
+            mainCtx.fillStyle = '#f59e0b';
+          } else if (pin.side === 'TOP') {
+            mainCtx.fillStyle = '#38bdf8';
+          } else {
+            mainCtx.fillStyle = '#f43f5e';
           }
-          if (showBottomPin && pin.side === 'BOTTOM') {
-            mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#f43f5e';
-            mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
-          }
-          if (pin.side === 'BOTH') {
-            if (showTopPin && showBottomPin) {
-              mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
-            } else if (showTopPin) {
-              mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#38bdf8';
-              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
-            } else if (showBottomPin) {
-              mainCtx.fillStyle = (state.highlightedNode === node) ? '#f59e0b' : '#f43f5e';
-              mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
-            }
-          }
+          mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
+        }
 
-          // Render Selected Pin Indicator Rectangular Box
-          if (state.selectedPin === pin) {
-            mainCtx.strokeStyle = '#ffffff';
-            mainCtx.lineWidth = 3 / state.transform.scale;
-            mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
-          }
+        // Render Selected Pin Indicator Rectangular Box
+        if (state.selectedPin === pin) {
+          mainCtx.strokeStyle = '#ffffff';
+          mainCtx.lineWidth = 3 / state.transform.scale;
+          mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
+        }
 
-          // Render Independent Device Outlines
-          if (pin.ref) {
-            mainCtx.lineWidth = 1 / state.transform.scale;
-            if (showTopComp && (pin.side === 'TOP' || pin.side === 'BOTH')) {
-              mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
-              mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
-            }
-            if (showBottomComp && (pin.side === 'BOTTOM' || pin.side === 'BOTH')) {
-              mainCtx.strokeStyle = 'rgba(244, 63, 94, 0.5)';
-              mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
-            }
+        // Render Independent Device Outlines
+        if (pin.ref) {
+          mainCtx.lineWidth = 1 / state.transform.scale;
+          if (state.visibility.topComp && (pin.side === 'TOP' || pin.side === 'BOTH')) {
+            mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
           }
-        });
+          if (state.visibility.bottomComp && (pin.side === 'BOTTOM' || pin.side === 'BOTH')) {
+            mainCtx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
+          }
+        }
       });
 
       mainCtx.restore();
@@ -843,12 +957,10 @@
       }
 
       overviewCtx.fillStyle = '#38bdf8';
-      state.nodes.forEach(node => {
-        node.pins.forEach(pin => {
-          const mx = offsetX + (pin.x - b.minX) * scale;
-          const my = h - (offsetY + (pin.y - b.minY) * scale);
-          overviewCtx.fillRect(mx, my, 1, 1);
-        });
+      state.allPins.forEach(pin => {
+        const mx = offsetX + (pin.x - b.minX) * scale;
+        const my = h - (offsetY + (pin.y - b.minY) * scale);
+        overviewCtx.fillRect(mx, my, 1, 1);
       });
     }
 
@@ -865,17 +977,15 @@
       const tx = state.transform.x;
       const ty = state.transform.y;
 
-      state.nodes.forEach(node => {
-        node.pins.forEach(pin => {
-          const screenX = pin.x * scale + tx;
-          const screenY = -pin.y * scale + ty;
-          
-          const dist = Math.hypot(screenX - clickX, screenY - clickY);
-          if (dist < minDist) {
-            minDist = dist;
-            closest = { pin, node, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
-          }
-        });
+      state.allPins.forEach(pin => {
+        const screenX = pin.x * scale + tx;
+        const screenY = -pin.y * scale + ty;
+        
+        const dist = Math.hypot(screenX - clickX, screenY - clickY);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = { pin, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
+        }
       });
       return closest;
     }
@@ -900,34 +1010,48 @@
 
     window.addEventListener('mouseup', () => state.isDragging = false);
 
-    // Left Click: Updates Notes Box
+    // Left Click: Updates Notes Box with full Pin, Component & Node info
     viewport.addEventListener('click', (e) => {
       const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
       if (dist < 5) {
         const hit = getPinAtMouse(e.clientX, e.clientY);
         if (hit) {
           state.selectedPin = hit.pin;
-          document.getElementById('notesBox').innerText = `Notes: The location (${hit.worldX}, ${hit.worldY}) on the node "${hit.node.name}" has been selected.`;
+          state.selectedComponent = hit.pin.component ? state.components[hit.pin.component] : null;
+
+          const pinStr = hit.pin.ref ? `Pin ${hit.pin.ref}` : `Location (${hit.worldX}, ${hit.worldY})`;
+          const compStr = hit.pin.component ? `Component "${hit.pin.component}"` : `No Component`;
+          const nodeStr = (hit.pin.nodeName && hit.pin.nodeName !== 'UNCONNECTED') ? `Node "${hit.pin.nodeName}"` : `Unconnected Net`;
+
+          document.getElementById('notesBox').innerText = `Notes: Selected ${pinStr} | ${compStr} | ${nodeStr} on ${hit.pin.side} side.`;
           render();
         }
       }
     });
 
-    // Right Click: Opens Device Entry Form Popup Modal
+    // Right Click: Opens Device Entry Form Popup Modal for clicked Component
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getPinAtMouse(e.clientX, e.clientY);
       if (hit) {
         state.selectedPin = hit.pin;
-        state.highlightedNode = hit.node;
 
-        document.getElementById('modalDesignator').value = hit.pin.component || 'u901';
-        
+        const compName = hit.pin.component;
+        const comp = compName ? state.components[compName] : null;
+
+        document.getElementById('modalDesignator').value = comp ? comp.name : (compName || 'N/A');
+        document.getElementById('modalDeviceType').value = comp ? 'Pin Library' : 'N/A';
+        document.getElementById('modalPartNumber').value = comp ? comp.name.toLowerCase() : 'N/A';
+        document.getElementById('modalSideBtn').innerText = comp ? comp.side : hit.pin.side;
+
         const tbody = document.getElementById('modalPinTableBody');
         tbody.innerHTML = '';
-        hit.node.pins.forEach(p => {
+
+        const pinsToList = comp ? comp.pins : [hit.pin];
+
+        pinsToList.forEach(p => {
           const row = document.createElement('tr');
-          row.innerHTML = `<td>${p.pinNum || '1'}</td><td>${p.nodeName}</td><td>No Probe</td><td>${p.side}</td>`;
+          row.innerHTML = `<td>${p.pinNum || p.ref || '1'}</td><td>${p.nodeName || 'UNCONNECTED'}</td><td>${p.access || 'No Probe'}</td><td>${p.side}</td>`;
           tbody.appendChild(row);
         });
 
@@ -968,22 +1092,15 @@
 
     // Search Features (Device & Node Search)
     function searchDevice() {
-      const query = document.getElementById('searchDeviceInput').value.trim().toLowerCase();
+      const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
-      let foundPin = null;
-      for (const node of state.nodes) {
-        for (const pin of node.pins) {
-          if (pin.component && pin.component.toLowerCase() === query) {
-            foundPin = pin;
-            state.selectedPin = pin;
-            state.highlightedNode = node;
-            break;
-          }
-        }
-        if (foundPin) break;
-      }
-      if (foundPin) {
-        document.getElementById('notesBox').innerText = `Notes: Component location "${query.toUpperCase()}" has been highlighted.`;
+
+      const comp = state.components[query];
+      if (comp && comp.pins.length > 0) {
+        state.selectedComponent = comp;
+        state.selectedPin = comp.pins[0];
+        document.getElementById('notesBox').innerText = `Notes: Component "${comp.name}" highlighted with ${comp.pins.length} pin(s) on ${comp.side} side.`;
+        document.getElementById('modalDesignator').value = comp.name;
         render();
       } else {
         document.getElementById('notesBox').innerText = `Notes: Device "${query}" not found.`;
@@ -991,19 +1108,15 @@
     }
 
     function searchNode() {
-      const query = document.getElementById('searchNodeInput').value.trim().toLowerCase();
+      const query = document.getElementById('searchNodeInput').value.trim();
       if (!query) return;
-      let foundNode = null;
-      for (const node of state.nodes) {
-        if (node.name.toLowerCase() === query) {
-          foundNode = node;
-          break;
-        }
-      }
+
+      let foundNode = state.nodes.find(n => n.name.toLowerCase() === query.toLowerCase());
+
       if (foundNode) {
         state.highlightedNode = foundNode;
         if (foundNode.pins.length > 0) state.selectedPin = foundNode.pins[0];
-        document.getElementById('notesBox').innerText = `Notes: Node pin location "${query.toUpperCase()}" has been highlighted.`;
+        document.getElementById('notesBox').innerText = `Notes: Node "${foundNode.name}" highlighted with ${foundNode.pins.length} location(s).`;
         render();
       } else {
         document.getElementById('notesBox').innerText = `Notes: Node "${query}" not found.`;
@@ -1029,6 +1142,7 @@
     
     document.getElementById('btnClearHighlights').addEventListener('click', () => {
       state.highlightedNode = null;
+      state.selectedComponent = null;
       state.selectedPin = null;
       document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
       render();
