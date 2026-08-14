@@ -246,7 +246,7 @@
       left: 0;
     }
 
-    /* Classic Windows Dialog Modal Popup (Device Entry Form) - Moveable */
+    /* Classic Windows Dialog Modal Popup (Device Entry Form) */
     #deviceEntryModal {
       position: absolute;
       top: 50%;
@@ -382,13 +382,21 @@
 
       <!-- File Loading Box -->
       <fieldset class="win-groupbox">
-        <legend>Load Board Data</legend>
-        <div style="display: flex; flex-direction: column; gap: 4px;">
+        <legend>Load Board Files</legend>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <!-- 1. Board Layout File -->
           <label class="win-btn" style="text-align: center;">
-            Select Board File (.file / .xy)
+            1. Select Layout File (.file / board_xy)
             <input type="file" id="fileInput1" accept=".file,.xy,.txt,*">
           </label>
-          <div id="file1Status" style="font-size: 10px; color: #404040; word-break: break-all;">No file selected</div>
+          <div id="file1Status" style="font-size: 10px; color: #404040; word-break: break-all;">Layout file: None</div>
+
+          <!-- 2. Board Netlist File -->
+          <label class="win-btn" style="text-align: center; background: #e2e8f0;">
+            2. Select Netlist File (board)
+            <input type="file" id="fileInput2" accept=".board,.txt,*">
+          </label>
+          <div id="file2Status" style="font-size: 10px; color: #047857; font-weight: bold; word-break: break-all;">Netlist file: None (Optional)</div>
         </div>
       </fieldset>
 
@@ -448,12 +456,12 @@
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <div style="display: flex; gap: 4px; align-items: center;">
             <span style="width: 50px;">Device:</span>
-            <input type="text" id="searchDeviceInput" placeholder="e.g. u901" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
+            <input type="text" id="searchDeviceInput" placeholder="e.g. u1" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
             <button class="win-btn" id="btnSearchDevice" style="padding: 2px 6px;">Find</button>
           </div>
           <div style="display: flex; gap: 4px; align-items: center;">
             <span style="width: 50px;">Node:</span>
-            <input type="text" id="searchNodeInput" placeholder="e.g. AGND" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
+            <input type="text" id="searchNodeInput" placeholder="e.g. DCOM" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
             <button class="win-btn" id="btnSearchNode" style="padding: 2px 6px;">Find</button>
           </div>
         </div>
@@ -482,7 +490,7 @@
       <div id="viewport">
         <canvas id="mainCanvas"></canvas>
 
-        <!-- Device Entry Form Popup Modal (Moveable) -->
+        <!-- Device Entry Form Popup Modal -->
         <div id="deviceEntryModal">
           <div class="modal-titlebar" id="modalTitleBar">
             <span>Device Entry Form</span>
@@ -546,7 +554,9 @@
     // State Management
     const state = {
       fileText: '',
+      netlistMap: {},
       nodes: [],
+      nodeMap: {},
       components: {},
       allPins: [],
       boardOutline: [],
@@ -585,6 +595,54 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
+    // Parse Netlist Master "board" File
+    function parseBoardNetlist(text) {
+      const devNetMap = {};
+      const lines = text.split('\n');
+      let inDevices = false;
+      let currentDev = null;
+
+      for (let line of lines) {
+        let trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
+
+        if (/^DEVICES\b/i.test(trimmed)) {
+          inDevices = true;
+          currentDev = null;
+          continue;
+        }
+
+        if (inDevices) {
+          if (/^(CONNECTIONS|BOUNDARY|RESISTOR|CAPACITOR|PIN LIBRARY|CONNECTOR|END)\b/i.test(trimmed)) {
+            inDevices = false;
+            currentDev = null;
+            continue;
+          }
+
+          if (trimmed.includes('.')) {
+            if (currentDev) {
+              let clean = trimmed.replace(/;$/, '').trim();
+              let dotIndex = clean.indexOf('.');
+              if (dotIndex > 0) {
+                let pinNum = clean.substring(0, dotIndex).trim().toUpperCase();
+                let netName = clean.substring(dotIndex + 1).trim();
+                devNetMap[currentDev][pinNum] = netName;
+              }
+            }
+          } else {
+            let devName = trimmed.replace(/;$/, '').trim().toUpperCase();
+            if (devName && !/^(END|CONNECTIONS)\b/i.test(devName)) {
+              currentDev = devName;
+              if (!devNetMap[currentDev]) {
+                devNetMap[currentDev] = {};
+              }
+            }
+          }
+        }
+      }
+      return devNetMap;
+    }
+
     // Parsing Agilent 3070 Board Files (.xy / .file)
     function parseBoardXY(text) {
       const nodes = [];
@@ -596,7 +654,6 @@
 
       const lines = text.split('\n');
 
-      // Pass 1: Pre-parse DEVICES section for default component sides
       let inDevices = false;
       for (let line of lines) {
         let trimmed = line.trim();
@@ -631,7 +688,6 @@
         return components[nameUpper];
       }
 
-      // Pass 2: Parse OUTLINE, NODE, OTHER sections
       let currentSection = null;
       let currentNode = null;
 
@@ -639,7 +695,6 @@
         let trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
 
-        // Section Headers
         if (/^(BOARD_)?OUTLINE/i.test(trimmed)) {
           currentSection = 'OUTLINE';
           currentNode = null;
@@ -688,7 +743,6 @@
           continue;
         }
 
-        // Section Content
         if (currentSection === 'OUTLINE') {
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)/);
           if (coordMatch) {
@@ -701,7 +755,6 @@
             const y = parseInt(coordMatch[2], 10);
             const meta = coordMatch[3] || '';
 
-            // Extract Component and Pin (e.g., U901.65, R101.1)
             const compMatch = meta.match(/([A-Z0-9_\-]+)\.([A-Z0-9_\-]+)/i);
             let compRef = '';
             let componentName = '';
@@ -709,11 +762,10 @@
 
             if (compMatch) {
               componentName = compMatch[1].toUpperCase();
-              pinNum = compMatch[2];
+              pinNum = compMatch[2].toUpperCase();
               compRef = `${componentName}.${pinNum}`;
             }
 
-            // Determine Side
             let side = 'BOTTOM';
             if (/\bTOP\b/i.test(meta)) {
               side = 'TOP';
@@ -723,7 +775,6 @@
               side = deviceSideMap[componentName];
             }
 
-            // Extract Access Type
             let access = 'NO_PROBE';
             if (/\bMANDATORY\b/i.test(meta)) access = 'MANDATORY';
             else if (/\bCRITICAL\b/i.test(meta)) access = 'CRITICAL';
@@ -754,23 +805,37 @@
         }
       }
 
-      // Pass 3: Proximity match component pins under OTHER to Node probe points
-      allPins.forEach(pin => {
-        if (pin.nodeName === 'UNCONNECTED') {
-          for (const node of nodes) {
-            for (const nPin of node.pins) {
-              if (Math.abs(nPin.x - pin.x) <= 50 && Math.abs(nPin.y - pin.y) <= 50) {
-                pin.nodeName = node.name;
-                node.pins.push(pin);
-                break;
-              }
+      return { nodes, outline, components, allPins, nodeMap };
+    }
+
+    // Merge Netlist Map into Layout Pins
+    function applyNetlistToPins() {
+      if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return;
+
+      let mappedCount = 0;
+      state.allPins.forEach(pin => {
+        if (pin.component && pin.pinNum) {
+          const compNets = state.netlistMap[pin.component];
+          if (compNets && compNets[pin.pinNum]) {
+            const realNetName = compNets[pin.pinNum];
+            pin.nodeName = realNetName;
+            mappedCount++;
+
+            if (!state.nodeMap[realNetName]) {
+              const newNode = { name: realNetName, pins: [] };
+              state.nodeMap[realNetName] = newNode;
+              state.nodes.push(newNode);
             }
-            if (pin.nodeName !== 'UNCONNECTED') break;
+            if (!state.nodeMap[realNetName].pins.includes(pin)) {
+              state.nodeMap[realNetName].pins.push(pin);
+            }
           }
         }
       });
 
-      return { nodes, outline, components, allPins };
+      document.getElementById('file2Status').innerText = `Netlist loaded: (${mappedCount} pins mapped accurately)`;
+      document.getElementById('statNodes').innerText = state.nodes.length;
+      render();
     }
 
     function calculateBounds(allPins, outline = []) {
@@ -814,20 +879,36 @@
       render();
     }
 
+    // 1. Layout File Loader
     document.getElementById('fileInput1').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      document.getElementById('file1Status').innerText = file.name;
+      document.getElementById('file1Status').innerText = 'Layout: ' + file.name;
       document.getElementById('appTitleBar').querySelector('span').innerText = 'Agilent Board Graphics Viewer: ' + file.name;
       const reader = new FileReader();
       reader.onload = (evt) => {
         state.fileText = evt.target.result;
         const parsed = parseBoardXY(state.fileText);
         state.nodes = parsed.nodes;
+        state.nodeMap = parsed.nodeMap;
         state.components = parsed.components;
         state.allPins = parsed.allPins;
         state.boardOutline = parsed.outline;
+
+        applyNetlistToPins();
         calculateBounds(state.allPins, state.boardOutline);
+      };
+      reader.readAsText(file);
+    });
+
+    // 2. Netlist File Loader (board)
+    document.getElementById('fileInput2').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        state.netlistMap = parseBoardNetlist(evt.target.result);
+        applyNetlistToPins();
       };
       reader.readAsText(file);
     });
@@ -876,7 +957,7 @@
         }
       }
 
-      // 2. Pins & Components (Rendered as Rectangles)
+      // 2. Pins & Components
       const pinWidth = 360;
       const pinHeight = 360;
       const halfW = pinWidth / 2;
@@ -892,7 +973,6 @@
         const isHighlighted = (state.highlightedNode && pin.nodeName === state.highlightedNode.name) ||
                               (state.selectedComponent && pin.component === state.selectedComponent.name);
 
-        // Draw Pins
         if ((isTopPin && showTopPin) || (isBottomPin && showBottomPin)) {
           if (isHighlighted) {
             mainCtx.fillStyle = '#f59e0b';
@@ -904,14 +984,12 @@
           mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
         }
 
-        // Render Selected Pin Indicator Rectangular Box
         if (state.selectedPin === pin) {
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 3 / state.transform.scale;
           mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
         }
 
-        // Render Independent Device Outlines
         if (pin.ref) {
           mainCtx.lineWidth = 1 / state.transform.scale;
           if (state.visibility.topComp && (pin.side === 'TOP' || pin.side === 'BOTH')) {
@@ -964,14 +1042,13 @@
       });
     }
 
-    // Hit-test mapping for pin clicks
     function getPinAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
       const clickY = clientY - rect.top;
 
       let closest = null;
-      let minDist = 25; // screen pixels threshold
+      let minDist = 25;
 
       const scale = state.transform.scale;
       const tx = state.transform.x;
@@ -990,7 +1067,6 @@
       return closest;
     }
 
-    // Mouse Interactions & Event Handlers
     viewport.addEventListener('mousedown', (e) => {
       state.isDragging = true;
       state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
@@ -1010,7 +1086,6 @@
 
     window.addEventListener('mouseup', () => state.isDragging = false);
 
-    // Left Click: Updates Notes Box with full Pin, Component & Node info
     viewport.addEventListener('click', (e) => {
       const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
       if (dist < 5) {
@@ -1029,7 +1104,6 @@
       }
     });
 
-    // Right Click: Opens Device Entry Form Popup Modal for clicked Component
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getPinAtMouse(e.clientX, e.clientY);
@@ -1067,7 +1141,6 @@
       document.getElementById('deviceEntryModal').style.display = 'none';
     });
 
-    // Make Device Entry Form Modal Moveable (Draggable)
     const modal = document.getElementById('deviceEntryModal');
     const modalTitleBar = document.getElementById('modalTitleBar');
     let isModalDragging = false;
@@ -1090,7 +1163,6 @@
       isModalDragging = false;
     });
 
-    // Search Features (Device & Node Search)
     function searchDevice() {
       const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
@@ -1128,7 +1200,6 @@
     document.getElementById('btnSearchNode').addEventListener('click', searchNode);
     document.getElementById('searchNodeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchNode(); });
 
-    // Button Controls Event Listeners
     document.getElementById('btnZoomIn').addEventListener('click', () => {
       state.transform.scale *= 1.25;
       render();
@@ -1164,7 +1235,6 @@
       render();
     }, { passive: false });
 
-    // Checkbox Feature Toggles
     document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
     document.getElementById('chkTopXY').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
     document.getElementById('chkBottomXY').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
