@@ -216,6 +216,55 @@
     .stats-bar span strong {
       color: var(--text-main);
     }
+
+    /* Pin Info Modal / Overlay Box */
+    #infoBox {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      width: 320px;
+      display: none;
+      z-index: 20;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    #infoBox h3 {
+      font-size: 0.95rem;
+      color: var(--accent-color);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #infoBox p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    #infoBox p span {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    #infoBox .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    #infoBox .close-btn:hover {
+      color: var(--text-main);
+    }
   </style>
 </head>
 <body>
@@ -242,9 +291,10 @@
         </label>
         <div class="file-status" id="file1Status">No file selected</div>
 
+        <!-- UPGRADED to Wirelist File -->
         <label class="file-btn" style="margin-top: 6px;">
-          Select File 2 (Optional)
-          <input type="file" id="fileInput2" accept=".file,.xy,.txt,*">
+          Select Wirelist File
+          <input type="file" id="fileInput2" accept=".file,.xy,.wire,.txt,*">
         </label>
         <div class="file-status" id="file2Status">No file selected</div>
       </div>
@@ -301,6 +351,20 @@
   <div id="viewport">
     <canvas id="mainCanvas"></canvas>
     
+    <!-- Pin Info Pop-up Box (New Feature) -->
+    <div id="infoBox">
+      <h3><span>Pin Information</span> <button class="close-btn" id="closeInfoBox">&times;</button></h3>
+      <p>Component: <span id="infoComp">-</span></p>
+      <p>Pin Number: <span id="infoPinNum">-</span></p>
+      <p>Node Name: <span id="infoNode">-</span></p>
+      <p>Side: <span id="infoSide">-</span></p>
+      <p>Coordinates: <span id="infoCoords">-</span></p>
+      <p id="infoConnectionsContainer" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+        <strong>Connected Pins on Node:</strong><br>
+        <span id="infoConnections" style="font-size: 0.75rem; color: var(--text-main); word-break: break-all;">-</span>
+      </p>
+    </div>
+
     <div class="stats-bar">
       <div>Nodes: <strong id="statNodes">0</strong></div>
       <div>Components/Pins: <strong id="statPins">0</strong></div>
@@ -326,8 +390,14 @@
       bounds: { minX: 0, maxX: 1000, minY: 0, maxY: 1000 },
       transform: { x: 0, y: 0, scale: 1 },
       isDragging: false,
-      dragStart: { x: 0, y: 0 }
+      dragStart: { x: 0, y: 0 },
+      
+      // New Interaction States
+      selectedPin: null,
+      highlightedNode: null
     };
+
+    let dragStartPos = { x: 0, y: 0 };
 
     // Canvas contexts
     const viewport = document.getElementById('viewport');
@@ -346,7 +416,7 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Parse Agilent 3070 board_xy file content
+    // Parse Agilent 3070 board_xy file content + Wirelist combined logic
     function parseBoardXY(text) {
       const nodes = [];
       const outline = [];
@@ -396,7 +466,7 @@
             outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
           }
         } else if (currentNode) {
-          // Parse pin coordinates
+          // Parse pin coordinates & extract deeper component/pin info
           const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
           if (coordMatch) {
             const x = parseInt(coordMatch[1], 10);
@@ -405,15 +475,20 @@
             const isTop = meta.includes('TOP');
             const isBottom = meta.includes('BOTTOM');
             
+            // Extract Reference (e.g., U200.1)
             const compMatch = meta.match(/([A-Z0-9]+\.[A-Z0-9]+)/i);
             const compRef = compMatch ? compMatch[1] : '';
+            const partsComp = compRef.split('.');
 
             currentNode.pins.push({
               x,
               y,
               side: isTop ? 'TOP' : (isBottom ? 'BOTTOM' : 'BOTH'),
               ref: compRef,
-              rawMeta: meta
+              component: partsComp[0] || compRef, // U200
+              pinNum: partsComp[1] || '',         // 1
+              rawMeta: meta,
+              nodeName: currentNode.name
             });
           }
         }
@@ -550,7 +625,24 @@
         }
       }
 
-      // 2. Pins & Component Representations
+      // 2. Draw Highlighted Connection Nets (Right-Click)
+      if (state.highlightedNode) {
+        mainCtx.strokeStyle = '#f59e0b';
+        mainCtx.lineWidth = 2.5 / state.transform.scale;
+        const pins = state.highlightedNode.pins;
+        if (pins.length > 1) {
+          mainCtx.beginPath();
+          for (let i = 0; i < pins.length; i++) {
+            for (let j = i + 1; j < pins.length; j++) {
+              mainCtx.moveTo(pins[i].x, pins[i].y);
+              mainCtx.lineTo(pins[j].x, pins[j].y);
+            }
+          }
+          mainCtx.stroke();
+        }
+      }
+
+      // 3. Pins & Component Representations
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
           const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
@@ -561,32 +653,44 @@
 
           if (!showTop && !showBottom) return;
 
+          const isSelected = (state.selectedPin === pin);
+          const isConnected = (state.highlightedNode === node);
+          const pinRadius = (isSelected || isConnected) ? 200 : 120;
+
           // Draw Pin Point
           if (showTop && showBottom) {
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 120, Math.PI / 2, Math.PI * 1.5, false);
-            mainCtx.fillStyle = '#38bdf8';
+            mainCtx.arc(pin.x, pin.y, pinRadius, Math.PI / 2, Math.PI * 1.5, false);
+            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#38bdf8';
             mainCtx.fill();
 
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 120, Math.PI * 1.5, Math.PI / 2, false);
-            mainCtx.fillStyle = '#f43f5e';
+            mainCtx.arc(pin.x, pin.y, pinRadius, Math.PI * 1.5, Math.PI / 2, false);
+            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#f43f5e';
             mainCtx.fill();
           } else if (showTop) {
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
-            mainCtx.fillStyle = '#38bdf8';
+            mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
+            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#38bdf8';
             mainCtx.fill();
           } else if (showBottom) {
             mainCtx.beginPath();
-            mainCtx.arc(pin.x, pin.y, 120, 0, Math.PI * 2);
-            mainCtx.fillStyle = '#f43f5e';
+            mainCtx.arc(pin.x, pin.y, pinRadius, 0, Math.PI * 2);
+            mainCtx.fillStyle = isConnected ? '#f59e0b' : '#f43f5e';
             mainCtx.fill();
+          }
+
+          // Outline Selected Pin
+          if (isSelected) {
+            mainCtx.strokeStyle = '#ffffff';
+            mainCtx.lineWidth = 4 / state.transform.scale;
+            mainCtx.beginPath();
+            mainCtx.arc(pin.x, pin.y, 280, 0, Math.PI * 2);
+            mainCtx.stroke();
           }
 
           // Component Outline simulation
           if (pin.ref) {
-            // FIXED: Evaluated against pin's exact side capability instead of visibility state constraint
             const showTopComp = isTopPin && state.visibility.topComp;
             const showBottomComp = isBottomPin && state.visibility.bottomComp;
 
@@ -619,31 +723,38 @@
       ctx.stroke();
     }
 
-    // Render Overview Map & Viewport Location Box
+    // Render Overview Map & Perfectly Track Viewport (Major Fix here)
     function renderOverview() {
       const w = overviewCanvas.width;
       const h = overviewCanvas.height;
       overviewCtx.clearRect(0, 0, w, h);
 
       const b = state.bounds;
-      const boardW = b.maxX - b.minX + 2000;
-      const boardH = b.maxY - b.minY + 2000;
+      const boardW = b.maxX - b.minX;
+      const boardH = b.maxY - b.minY;
 
       if (boardW <= 0 || boardH <= 0) return;
 
-      const scale = Math.min(w / boardW, h / boardH);
+      const pad = 0.05; // 5% padding
+      const scale = Math.min((w * (1 - pad)) / boardW, (h * (1 - pad)) / boardH);
       const offsetX = (w - boardW * scale) / 2;
       const offsetY = (h - boardH * scale) / 2;
+
+      // Coordinate converter for minimap placement
+      function worldToMinimap(wx, wy) {
+        const mx = offsetX + (wx - b.minX) * scale;
+        const my = h - (offsetY + (wy - b.minY) * scale); // Inverted Y map
+        return { x: mx, y: my };
+      }
 
       // Draw Mini Board Outline
       overviewCtx.strokeStyle = '#334155';
       if (state.boardOutline && state.boardOutline.length > 0) {
         overviewCtx.beginPath();
         for (let i = 0; i < state.boardOutline.length; i++) {
-          const mx = offsetX + (state.boardOutline[i].x - b.minX + 1000) * scale;
-          const my = h - (offsetY + (state.boardOutline[i].y - b.minY + 1000) * scale);
-          if (i === 0) overviewCtx.moveTo(mx, my);
-          else overviewCtx.lineTo(mx, my);
+          const pt = worldToMinimap(state.boardOutline[i].x, state.boardOutline[i].y);
+          if (i === 0) overviewCtx.moveTo(pt.x, pt.y);
+          else overviewCtx.lineTo(pt.x, pt.y);
         }
         overviewCtx.closePath();
         overviewCtx.stroke();
@@ -655,29 +766,159 @@
       overviewCtx.fillStyle = '#38bdf8';
       state.nodes.forEach(node => {
         node.pins.forEach(pin => {
-          const mx = offsetX + (pin.x - b.minX + 1000) * scale;
-          const my = h - (offsetY + (pin.y - b.minY + 1000) * scale);
-          overviewCtx.fillRect(mx, my, 1.5, 1.5);
+          const pt = worldToMinimap(pin.x, pin.y);
+          overviewCtx.fillRect(pt.x, pt.y, 1.5, 1.5);
         });
       });
 
-      // Draw Viewport Box
-      const vpLeft = (-state.transform.x - b.minX + 1000) * (scale / state.transform.scale) + offsetX;
-      const vpTop = (-state.transform.y - b.minY + 1000) * (scale / state.transform.scale) + offsetY;
-      const vpW = mainCanvas.width * (scale / state.transform.scale);
-      const vpH = mainCanvas.height * (scale / state.transform.scale);
+      // --- Precise Viewport Box Mapping Fix ---
+      // We map the four corners of the screen directly into world coordinates, 
+      // ensuring pan offsets and "flip side" translates are mathematically accounted for.
+      function screenToWorld(sx, sy) {
+        const wx = (sx - state.transform.x) / state.transform.scale;
+        let wy = (sy - state.transform.y) / state.transform.scale;
+        if (state.currentSide === 'BOTTOM') {
+          const centerY = (b.minY + b.maxY) / 2;
+          wy = centerY - (wy - centerY);
+        }
+        return { x: wx, y: wy };
+      }
+
+      const tl = screenToWorld(0, 0); // Top Left screen corner
+      const br = screenToWorld(mainCanvas.width, mainCanvas.height); // Bottom Right screen corner
+
+      // Determine viewport bounding box in world space
+      const vpMinX = Math.min(tl.x, br.x);
+      const vpMaxX = Math.max(tl.x, br.x);
+      const vpMinY = Math.min(tl.y, br.y);
+      const vpMaxY = Math.max(tl.y, br.y);
+
+      // Map to minimap coords
+      const mm1 = worldToMinimap(vpMinX, vpMaxY); // MaxY mapped due to inverted drawing Y 
+      const mm2 = worldToMinimap(vpMaxX, vpMinY); 
 
       overviewCtx.strokeStyle = '#f59e0b';
       overviewCtx.lineWidth = 1.5;
-      overviewCtx.strokeRect(vpLeft, vpTop, vpW, vpH);
+      overviewCtx.strokeRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
       overviewCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
-      overviewCtx.fillRect(vpLeft, vpTop, vpW, vpH);
+      overviewCtx.fillRect(mm1.x, mm1.y, mm2.x - mm1.x, mm2.y - mm1.y);
     }
 
-    // Mouse Interaction (Pan & Zoom)
+    // Interactive Hit Test helper
+    function getPinAtMouse(clientX, clientY) {
+      const rect = mainCanvas.getBoundingClientRect();
+      const clickX = clientX - rect.left;
+      const clickY = clientY - rect.top;
+
+      let worldX = (clickX - state.transform.x) / state.transform.scale;
+      let worldY = (clickY - state.transform.y) / state.transform.scale;
+      
+      if (state.currentSide === 'BOTTOM') {
+        const centerY = (state.bounds.minY + state.bounds.maxY) / 2;
+        worldY = centerY - (worldY - centerY);
+      }
+
+      let closestPin = null;
+      let minDistance = 350 / state.transform.scale; // Hit radius tolerance
+
+      state.nodes.forEach(node => {
+        node.pins.forEach(pin => {
+          const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
+          const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
+          const isVisible = (state.currentSide === 'TOP' && isTopPin && state.visibility.topPins) || 
+                            (state.currentSide === 'BOTTOM' && isBottomPin && state.visibility.bottomPins);
+
+          if (!isVisible) return;
+
+          const dist = Math.hypot(pin.x - worldX, pin.y - worldY);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPin = { pin, node };
+          }
+        });
+      });
+
+      return closestPin;
+    }
+
+    // Left Click Handler (Info Select)
+    function handleLeftClick(e) {
+      const hit = getPinAtMouse(e.clientX, e.clientY);
+      const infoBox = document.getElementById('infoBox');
+
+      if (hit) {
+        state.selectedPin = hit.pin;
+        state.highlightedNode = null; // Clearing right-click mode
+        
+        document.getElementById('infoComp').innerText = hit.pin.component || 'N/A';
+        document.getElementById('infoPinNum').innerText = hit.pin.pinNum || 'N/A';
+        document.getElementById('infoNode').innerText = hit.node.name;
+        document.getElementById('infoSide').innerText = hit.pin.side;
+        document.getElementById('infoCoords').innerText = `X: ${hit.pin.x}, Y: ${hit.pin.y}`;
+        
+        const connectionsText = hit.node.pins.map(p => p.ref || 'Pin').join(', ');
+        document.getElementById('infoConnections').innerText = `${hit.node.name} = [ ${connectionsText} ]`;
+        
+        infoBox.style.display = 'block';
+        render();
+      } else {
+        infoBox.style.display = 'none';
+        state.selectedPin = null;
+        render();
+      }
+    }
+
+    // Right Click Handler (Connection Highlight)
+    viewport.addEventListener('contextmenu', (e) => {
+      e.preventDefault(); 
+      const hit = getPinAtMouse(e.clientX, e.clientY);
+      const infoBox = document.getElementById('infoBox');
+
+      if (hit) {
+        state.selectedPin = hit.pin;
+        state.highlightedNode = hit.node; 
+
+        document.getElementById('infoComp').innerText = hit.pin.component || 'N/A';
+        document.getElementById('infoPinNum').innerText = hit.pin.pinNum || 'N/A';
+        document.getElementById('infoNode').innerText = hit.node.name;
+        document.getElementById('infoSide').innerText = hit.pin.side;
+        document.getElementById('infoCoords').innerText = `X: ${hit.pin.x}, Y: ${hit.pin.y}`;
+
+        const connectionsText = hit.node.pins.map(p => p.ref || 'Pin').join(', ');
+        document.getElementById('infoConnections').innerText = `Connected Net:\n${hit.node.name} = [ ${connectionsText} ]`;
+
+        infoBox.style.display = 'block';
+        render();
+      } else {
+        state.highlightedNode = null;
+        state.selectedPin = null;
+        infoBox.style.display = 'none';
+        render();
+      }
+    });
+
+    document.getElementById('closeInfoBox').addEventListener('click', () => {
+      document.getElementById('infoBox').style.display = 'none';
+      state.selectedPin = null;
+      state.highlightedNode = null;
+      render();
+    });
+
+    // Mouse Interaction (Pan & Zoom + Click separation)
     viewport.addEventListener('mousedown', (e) => {
-      state.isDragging = true;
-      state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
+      if (e.button === 0) { // Only drag pan on left click
+        state.isDragging = true;
+        state.dragStart = { x: e.clientX - state.transform.x, y: e.clientY - state.transform.y };
+        dragStartPos = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    viewport.addEventListener('click', (e) => {
+      // Calculate dist so dragging doesn't randomly trigger a Pin Left click 
+      const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+      if (dist < 5) {
+        handleLeftClick(e);
+      }
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -722,7 +963,7 @@
     document.getElementById('chkBottomPins').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
     document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
     document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
-    document.getElementById('chkBoardOutline',).addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
+    document.getElementById('chkBoardOutline').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
 
     // Initial Layout Setup
     resizeCanvas();
