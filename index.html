@@ -252,7 +252,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 540px;
+      width: 560px;
       background: var(--agilent-panel);
       border: 2px solid;
       border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
@@ -328,9 +328,10 @@
     table.pin-grid td {
       border: 1px solid #dfdfdf;
       padding: 3px;
+      cursor: pointer;
     }
 
-    table.pin-grid tr:hover {
+    table.pin-grid tr:hover, table.pin-grid tr.selected-row {
       background: #000080;
       color: white;
     }
@@ -532,9 +533,10 @@
             </div>
 
             <div class="modal-buttons">
-              <button class="win-btn" style="width: 110px;">Replace Device</button>
-              <button class="win-btn" style="width: 110px;">Delete Device</button>
-              <button class="win-btn" id="modalCloseBtn" style="width: 80px;">Close</button>
+              <button class="win-btn" id="modalConnectedPinBtn" style="width: 120px; background: #f59e0b; color: black;">Connected Pins</button>
+              <button class="win-btn" style="width: 100px;">Replace Device</button>
+              <button class="win-btn" style="width: 100px;">Delete Device</button>
+              <button class="win-btn" id="modalCloseBtn" style="width: 70px;">Close</button>
             </div>
           </div>
         </div>
@@ -802,6 +804,32 @@
       return { nodes, outline, components, allPins, nodeMap };
     }
 
+    // Calculate real Component Body Bounding Box
+    function getComponentBounds(comp) {
+      if (!comp || !comp.pins || comp.pins.length === 0) return null;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+      comp.pins.forEach(pin => {
+        if (pin.x < minX) minX = pin.x;
+        if (pin.x > maxX) maxX = pin.x;
+        if (pin.y < minY) minY = pin.y;
+        if (pin.y > maxY) maxY = pin.y;
+      });
+
+      // Add padding around the outermost pin coordinates (300 Tenth Mils)
+      const pad = 300;
+      const width = (maxX - minX) + (pad * 2);
+      const height = (maxY - minY) + (pad * 2);
+
+      return {
+        x: minX - pad,
+        y: minY - pad,
+        w: width,
+        h: height
+      };
+    }
+
     // Merge Netlist Map into Layout Pins
     function applyNetlistToPins() {
       if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return 0;
@@ -877,15 +905,12 @@
       const files = Array.from(e.target.files);
       if (!files.length) return;
 
-      // Extract Model Folder Name from path
       const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : 'Selected Model';
 
-      // 1. Search for 'board_xy' layout file
       let xyFile = files.find(f => f.name.toLowerCase() === 'board_xy') ||
                    files.find(f => f.name.toLowerCase().endsWith('.xy')) ||
                    files.find(f => f.name.toLowerCase().endsWith('.file'));
 
-      // 2. Search for 'board' netlist file (Exact match preferred to avoid board.o or board_xy)
       let boardFile = files.find(f => f.name.toLowerCase() === 'board') ||
                       files.find(f => f.name.toLowerCase().endsWith('.board'));
 
@@ -897,7 +922,6 @@
       document.getElementById('appTitleBar').querySelector('span').innerText = 'Agilent Board Graphics Viewer: ' + folderName;
       document.getElementById('folderStatus').innerHTML = `⏳ Loading <b>${folderName}</b>...`;
 
-      // Read Layout 'board_xy'
       const readerXY = new FileReader();
       readerXY.onload = (evt) => {
         state.fileText = evt.target.result;
@@ -910,7 +934,6 @@
 
         let statusText = `<b>Folder: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
 
-        // If 'board' netlist exists, read it
         if (boardFile) {
           const readerBoard = new FileReader();
           readerBoard.onload = (bEvt) => {
@@ -957,7 +980,23 @@
         }
       }
 
-      // Highlighted Net Connections
+      // 2. Real Component Body Outlines (One clean bounding box per component)
+      Object.values(state.components).forEach(comp => {
+        const isTop = comp.side === 'TOP';
+        const isBottom = comp.side === 'BOTTOM';
+        const showComp = (isTop && state.visibility.topComp) || (isBottom && state.visibility.bottomComp);
+
+        if (showComp && comp.pins.length > 0) {
+          const bounds = getComponentBounds(comp);
+          if (bounds) {
+            mainCtx.lineWidth = 1.5 / state.transform.scale;
+            mainCtx.strokeStyle = isTop ? 'rgba(56, 189, 248, 0.8)' : 'rgba(244, 63, 94, 0.8)';
+            mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+          }
+        }
+      });
+
+      // 3. Highlighted Net Connections
       if (state.highlightedNode) {
         mainCtx.strokeStyle = '#f59e0b';
         mainCtx.lineWidth = 2.5 / state.transform.scale;
@@ -974,7 +1013,7 @@
         }
       }
 
-      // 2. Pins & Components
+      // 4. Pins
       const pinWidth = 360;
       const pinHeight = 360;
       const halfW = pinWidth / 2;
@@ -1005,18 +1044,6 @@
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 3 / state.transform.scale;
           mainCtx.strokeRect(pin.x - 300, pin.y - 300, 600, 600);
-        }
-
-        if (pin.ref) {
-          mainCtx.lineWidth = 1 / state.transform.scale;
-          if (state.visibility.topComp && (pin.side === 'TOP' || pin.side === 'BOTH')) {
-            mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
-          }
-          if (state.visibility.bottomComp && (pin.side === 'BOTTOM' || pin.side === 'BOTH')) {
-            mainCtx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
-            mainCtx.strokeRect(pin.x - 250, pin.y - 250, 500, 500);
-          }
         }
       });
 
@@ -1103,6 +1130,7 @@
 
     window.addEventListener('mouseup', () => state.isDragging = false);
 
+    // Left Click Selection
     viewport.addEventListener('click', (e) => {
       const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
       if (dist < 5) {
@@ -1121,6 +1149,7 @@
       }
     });
 
+    // Right Click: Opens Modal and populates pin grid
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getPinAtMouse(e.clientX, e.clientY);
@@ -1142,12 +1171,45 @@
 
         pinsToList.forEach(p => {
           const row = document.createElement('tr');
+          if (p === hit.pin) row.classList.add('selected-row');
+
           row.innerHTML = `<td>${p.pinNum || p.ref || '1'}</td><td>${p.nodeName || 'UNCONNECTED'}</td><td>${p.access || 'No Probe'}</td><td>${p.side}</td>`;
+
+          // Clicking a row highlights that specific pin's connected node
+          row.addEventListener('click', () => {
+            Array.from(tbody.children).forEach(r => r.classList.remove('selected-row'));
+            row.classList.add('selected-row');
+            state.selectedPin = p;
+            highlightPinNode(p);
+          });
+
           tbody.appendChild(row);
         });
 
         document.getElementById('deviceEntryModal').style.display = 'block';
         render();
+      }
+    });
+
+    // Helper: Highlight node connections for a specific pin
+    function highlightPinNode(pin) {
+      if (!pin || !pin.nodeName || pin.nodeName === 'UNCONNECTED') {
+        state.highlightedNode = null;
+        document.getElementById('notesBox').innerText = `Notes: Selected pin ${pin.ref || 'pin'} is unconnected.`;
+      } else {
+        const foundNode = state.nodeMap[pin.nodeName] || state.nodes.find(n => n.name === pin.nodeName);
+        if (foundNode) {
+          state.highlightedNode = foundNode;
+          document.getElementById('notesBox').innerText = `Notes: Highlighted Node "${foundNode.name}" with ${foundNode.pins.length} connected pin(s).`;
+        }
+      }
+      render();
+    }
+
+    // "Connected Pins" Button Click Handler inside Device Entry Form
+    document.getElementById('modalConnectedPinBtn').addEventListener('click', () => {
+      if (state.selectedPin) {
+        highlightPinNode(state.selectedPin);
       }
     });
 
