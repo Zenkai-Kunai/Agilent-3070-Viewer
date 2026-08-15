@@ -6,170 +6,204 @@
   <title>Agilent 3070 Board Graphic Viewer</title>
   <style>
     :root {
-      --agilent-bg: #c0c0c0;
-      --agilent-panel: #d4d0c8;
-      --agilent-dark: #808080;
-      --agilent-darker: #404040;
-      --agilent-border-light: #ffffff;
-      --agilent-border-dark: #404040;
-      --agilent-border-shadow: #808080;
-      --agilent-text: #000000;
-      --agilent-blue: #000080;
-      --agilent-title-bg: linear-gradient(90deg, #000080, #1084d0);
+      --bg-dark: #0f172a;
+      --panel-bg: #1e293b;
+      --panel-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-pink: #f43f5e;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --btn-bg: #334155;
+      --btn-hover: #475569;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: Tahoma, Arial, sans-serif;
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     body {
-      background-color: var(--agilent-bg);
-      color: var(--agilent-text);
+      background-color: var(--bg-dark);
+      color: var(--text-main);
       display: flex;
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
-      font-size: 11px;
+      font-size: 12px;
     }
 
-    /* Windows Title Bar with Developer Credit */
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+
+    /* Modern Titlebar */
     .app-titlebar {
-      background: var(--agilent-title-bg);
-      color: white;
-      padding: 4px 10px;
-      font-weight: bold;
+      background: #020617;
+      color: var(--text-main);
+      padding: 8px 16px;
+      font-weight: 600;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
-      border-bottom: 1px solid var(--agilent-border-dark);
+      font-size: 13px;
+      border-bottom: 1px solid var(--panel-border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
     .app-titlebar .creator-credit {
-      font-weight: normal;
+      font-weight: 500;
       font-size: 11px;
-      opacity: 0.95;
-      background: rgba(255, 255, 255, 0.15);
-      padding: 2px 8px;
-      border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
-    /* Main App Workspace Layout */
+    /* Main Workspace Layout */
     .workspace {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
-    /* Left Control & File Sidebar Panel */
+    /* Left Control Sidebar Panel */
     #sidebar {
-      width: 340px;
-      background: var(--agilent-panel);
-      border-right: 2px groove var(--agilent-border-light);
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--panel-border);
       display: flex;
       flex-direction: column;
-      padding: 6px;
-      gap: 6px;
+      padding: 12px;
+      gap: 10px;
       overflow-y: auto;
     }
 
-    .win-groupbox {
-      border: 2px groove var(--agilent-border-light);
-      padding: 6px;
-      background: var(--agilent-panel);
-      position: relative;
-      margin-top: 4px;
+    .card-box {
+      border: 1px solid var(--panel-border);
+      padding: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .win-groupbox legend {
-      font-weight: bold;
-      padding: 0 4px;
-      color: var(--agilent-darker);
+    .card-box .card-title {
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
     }
 
-    /* Classic Windows Buttons */
-    .win-btn {
-      background: var(--agilent-panel);
-      border: 2px solid;
-      border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
-      padding: 6px 8px;
+    /* Modern Styled Buttons */
+    .modern-btn {
+      background: var(--btn-bg);
+      border: 1px solid var(--panel-border);
+      padding: 7px 12px;
       text-align: center;
       font-size: 11px;
       cursor: pointer;
-      font-weight: bold;
-      color: black;
+      font-weight: 600;
+      color: var(--text-main);
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
-    .win-btn:active {
-      border-color: var(--agilent-border-dark) var(--agilent-border-light) var(--agilent-border-light) var(--agilent-border-dark);
-      padding: 7px 7px 5px 9px;
+    .modern-btn:hover {
+      background: var(--btn-hover);
+      border-color: #64748b;
     }
 
-    .win-btn.active {
-      background: #ece9d8;
-      border-style: inset;
+    .modern-btn:active {
+      transform: scale(0.98);
+    }
+
+    .modern-btn.primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .modern-btn.primary:hover {
+      background: #1d4ed8;
     }
 
     /* Status & Notes Panel */
     .status-panel {
-      background: #ffffff;
-      border: 2px inset var(--agilent-border-dark);
-      padding: 6px;
-      min-height: 55px;
+      background: #020617;
+      border: 1px solid var(--panel-border);
+      padding: 10px;
+      border-radius: 8px;
+      min-height: 60px;
       font-size: 11px;
-      margin-bottom: 6px;
+      line-height: 1.4;
     }
 
     .status-indicator {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-weight: bold;
+      gap: 8px;
+      font-weight: 600;
       margin-bottom: 4px;
+      color: var(--accent-green);
     }
 
     .status-led {
-      width: 10px;
-      height: 10px;
-      background: #00aa00;
-      border: 1px solid #005500;
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-green);
     }
 
-    /* Features Matrix Layout */
+    /* Features Grid */
     .features-grid {
       display: grid;
       grid-template-columns: 1fr auto auto;
-      gap: 4px 8px;
+      gap: 6px 12px;
       align-items: center;
-      font-size: 10px;
-      margin-top: 4px;
+      font-size: 11px;
     }
 
     .features-grid-header {
-      font-weight: bold;
+      font-weight: 600;
       text-align: center;
-      border-bottom: 1px solid var(--agilent-dark);
-      padding-bottom: 2px;
+      color: var(--text-muted);
     }
 
     /* Action Control Button Grid */
     .action-buttons-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      margin-top: 6px;
+      gap: 6px;
     }
 
     /* Overview Map Box */
     #overview-container {
       width: 100%;
-      height: 140px;
-      background: #000000;
-      border: 2px inset var(--agilent-border-dark);
+      height: 130px;
+      background: #020617;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      overflow: hidden;
       position: relative;
     }
 
@@ -183,37 +217,49 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: var(--agilent-bg);
+      background: var(--bg-dark);
       position: relative;
       overflow: hidden;
     }
 
     .version-bar {
-      background: var(--agilent-panel);
-      padding: 4px 8px;
-      border-bottom: 1px solid var(--agilent-border-dark);
+      background: var(--panel-bg);
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--panel-border);
       display: flex;
       justify-content: space-between;
-      font-weight: bold;
+      font-weight: 600;
+      color: var(--text-muted);
     }
 
     .view-toolbar {
-      background: var(--agilent-panel);
-      padding: 4px 8px;
+      background: var(--panel-bg);
+      padding: 6px 12px;
       display: flex;
       align-items: center;
       gap: 12px;
-      border-bottom: 2px groove var(--agilent-border-light);
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    select, input[type="text"] {
+      background: #020617;
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 4px 8px;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    select:focus, input[type="text"]:focus {
+      border-color: var(--accent-blue);
     }
 
     #viewport {
       flex: 1;
       position: relative;
-      background-color: #000000;
+      background-color: #020617;
       cursor: crosshair;
       overflow: hidden;
-      border: 2px inset var(--agilent-border-dark);
-      margin: 4px;
     }
 
     #mainCanvas {
@@ -222,68 +268,77 @@
       left: 0;
     }
 
-    /* Device Entry Form Popup Modal */
+    /* Loading Overlay with Progress Bar */
+    #loadingOverlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(4px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 50;
+    }
+
+    .progress-box {
+      width: 280px;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--accent-blue);
+      transition: width 0.05s linear;
+    }
+
+    /* Modern Popup Modal (Device Entry Form) */
     #deviceEntryModal {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 560px;
-      background: var(--agilent-panel);
-      border: 2px solid;
-      border-color: var(--agilent-border-light) var(--agilent-border-dark) var(--agilent-border-dark) var(--agilent-border-light);
-      box-shadow: 4px 4px 16px rgba(0,0,0,0.5);
+      width: 580px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.5);
       z-index: 100;
       display: none;
+      overflow: hidden;
     }
 
     .modal-titlebar {
-      background: var(--agilent-title-bg);
-      color: white;
-      padding: 4px 6px;
-      font-weight: bold;
+      background: #020617;
+      color: var(--text-main);
+      padding: 10px 14px;
+      font-weight: 600;
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: move;
+      border-bottom: 1px solid var(--panel-border);
     }
 
     .modal-body {
-      padding: 10px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .modal-menu {
-      display: flex;
-      gap: 12px;
-      border-bottom: 1px solid var(--agilent-dark);
-      padding-bottom: 4px;
-      font-size: 11px;
-    }
-
-    .form-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-    }
-
-    .form-row input[type="text"] {
-      background: white;
-      border: 1px inset var(--agilent-border-dark);
-      padding: 2px 4px;
-      flex: 1;
-    }
-
-    /* Pin Table Grid inside Device Entry Form */
     .pin-table-container {
-      height: 160px;
-      background: white;
-      border: 2px inset var(--agilent-border-dark);
+      height: 170px;
+      background: #020617;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
       overflow-y: auto;
-      margin-top: 4px;
     }
 
     table.pin-grid {
@@ -293,30 +348,31 @@
     }
 
     table.pin-grid th {
-      background: var(--agilent-panel);
-      border: 1px solid var(--agilent-dark);
-      padding: 3px;
+      background: #1e293b;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 6px 8px;
       text-align: left;
       position: sticky;
       top: 0;
+      color: var(--text-muted);
     }
 
     table.pin-grid td {
-      border: 1px solid #dfdfdf;
-      padding: 3px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      padding: 5px 8px;
       cursor: pointer;
     }
 
     table.pin-grid tr:hover, table.pin-grid tr.selected-row {
-      background: #000080;
+      background: #2563eb;
       color: white;
     }
 
     .modal-buttons {
       display: flex;
       justify-content: flex-end;
-      gap: 6px;
-      margin-top: 6px;
+      gap: 8px;
+      margin-top: 4px;
     }
 
     input[type="file"] { display: none; }
@@ -324,10 +380,10 @@
 </head>
 <body>
 
-  <!-- App Title Bar with Developer Credit -->
+  <!-- App Title Bar -->
   <div class="app-titlebar" id="appTitleBar">
     <span id="titleText">Agilent Board Graphics Viewer</span>
-    <span class="creator-credit">Developer Credit: AM KS DEBUG</span>
+    <span class="creator-credit">Developer Credit: zenkai-kunai</span>
   </div>
 
   <!-- Main Workspace -->
@@ -346,34 +402,32 @@
       </div>
 
       <!-- Single Folder Selection Box -->
-      <fieldset class="win-groupbox">
-        <legend>Load Board Model Folder</legend>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          <label class="win-btn" style="text-align: center; background: #000080; color: white;">
-            📁 Select Board Model Folder
-            <input type="file" id="folderInput" webkitdirectory directory multiple>
-          </label>
-          <div id="folderStatus" style="font-size: 10px; color: #333; word-break: break-all; line-height: 1.4;">
-            No folder selected.<br><i>Click above and pick any model folder!</i>
-          </div>
+      <div class="card-box">
+        <div class="card-title">Load Board Model Folder</div>
+        <label class="modern-btn primary" style="width: 100%;">
+          📁 Select Board Model Folder
+          <input type="file" id="folderInput" webkitdirectory directory multiple>
+        </label>
+        <div id="folderStatus" style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+          No folder selected. Pick any board model folder!
         </div>
-      </fieldset>
+      </div>
 
       <!-- Action Buttons Grid -->
       <div class="action-buttons-grid">
-        <button class="win-btn" id="btnShowPanel">Show Panel View</button>
-        <button class="win-btn" id="btnFullView">Full View</button>
-        <button class="win-btn" id="btnRedraw">Redraw</button>
-        <button class="win-btn" id="btnPreviousView">Previous View</button>
-        <button class="win-btn" id="btnZoomIn">Zoom In</button>
-        <button class="win-btn" id="btnZoomOut">Zoom Out</button>
-        <button class="win-btn" id="btnZoomToHighlights" style="grid-column: span 2;">Zoom To Highlights</button>
-        <button class="win-btn" id="btnClearHighlights" style="grid-column: span 2;">Clear Highlights</button>
+        <button class="modern-btn" id="btnShowPanel">Show Panel</button>
+        <button class="modern-btn" id="btnFullView">Full View</button>
+        <button class="modern-btn" id="btnRedraw">Redraw</button>
+        <button class="modern-btn" id="btnPreviousView">Previous View</button>
+        <button class="modern-btn" id="btnZoomIn">Zoom In (+)</button>
+        <button class="modern-btn" id="btnZoomOut">Zoom Out (-)</button>
+        <button class="modern-btn" id="btnZoomToHighlights" style="grid-column: span 2;">Zoom To Highlights</button>
+        <button class="modern-btn" id="btnClearHighlights" style="grid-column: span 2; background: #b91c1c; border-color: #ef4444;">Clear Highlights</button>
       </div>
 
       <!-- Features Shown Matrix -->
-      <fieldset class="win-groupbox">
-        <legend>Features Shown</legend>
+      <div class="card-box">
+        <div class="card-title">Features Shown</div>
         <div class="features-grid">
           <div></div>
           <div class="features-grid-header">Bottom</div>
@@ -399,32 +453,32 @@
           <div style="text-align: center;"><input type="checkbox" id="chkBottomKeepout"></div>
           <div style="text-align: center;"><input type="checkbox" id="chkTopKeepout"></div>
         </div>
-      </fieldset>
+      </div>
 
       <!-- Overview Map Box -->
-      <fieldset class="win-groupbox">
-        <legend>Overview</legend>
+      <div class="card-box">
+        <div class="card-title">Overview</div>
         <div id="overview-container">
           <canvas id="overviewCanvas"></canvas>
         </div>
-      </fieldset>
+      </div>
 
-      <!-- Search Section (Device & Node) -->
-      <fieldset class="win-groupbox">
-        <legend>Search Location</legend>
+      <!-- Search Section -->
+      <div class="card-box">
+        <div class="card-title">Search Location</div>
         <div style="display: flex; flex-direction: column; gap: 6px;">
-          <div style="display: flex; gap: 4px; align-items: center;">
-            <span style="width: 50px;">Device:</span>
-            <input type="text" id="searchDeviceInput" placeholder="e.g. u1" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
-            <button class="win-btn" id="btnSearchDevice" style="padding: 2px 6px;">Find</button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="width: 50px; color: var(--text-muted);">Device:</span>
+            <input type="text" id="searchDeviceInput" placeholder="e.g. u1" style="flex: 1;">
+            <button class="modern-btn" id="btnSearchDevice" style="padding: 4px 10px;">Find</button>
           </div>
-          <div style="display: flex; gap: 4px; align-items: center;">
-            <span style="width: 50px;">Node:</span>
-            <input type="text" id="searchNodeInput" placeholder="e.g. DCOM" style="flex: 1; padding: 2px; font-size: 10px; background: white; border: 1px inset var(--agilent-border-dark);">
-            <button class="win-btn" id="btnSearchNode" style="padding: 2px 6px;">Find</button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="width: 50px; color: var(--text-muted);">Node:</span>
+            <input type="text" id="searchNodeInput" placeholder="e.g. DCOM" style="flex: 1;">
+            <button class="modern-btn" id="btnSearchNode" style="padding: 4px 10px;">Find</button>
           </div>
         </div>
-      </fieldset>
+      </div>
 
     </div>
 
@@ -437,17 +491,26 @@
       </div>
 
       <div class="view-toolbar">
-        <span>View:</span>
-        <select id="viewSideSelect" class="win-btn" style="padding: 2px 6px;">
+        <span>View Side:</span>
+        <select id="viewSideSelect">
           <option value="TOP">Top View</option>
           <option value="BOTTOM" selected>Bottom View</option>
         </select>
-        <span style="margin-left: auto; font-size: 10px; color: #404040;">Nodes: <strong id="statNodes">0</strong> | Components/Pins: <strong id="statPins">0</strong> | Zoom: <strong id="statZoom">100%</strong></span>
+        <span style="margin-left: auto; color: var(--text-muted);">Nodes: <strong id="statNodes" style="color: var(--text-main);">0</strong> | Components/Pins: <strong id="statPins" style="color: var(--text-main);">0</strong> | Zoom: <strong id="statZoom" style="color: var(--accent-blue);">100%</strong></span>
       </div>
 
       <!-- Canvas Viewport -->
       <div id="viewport">
         <canvas id="mainCanvas"></canvas>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay">
+          <div style="font-size: 14px; font-weight: 600; color: var(--accent-blue);" id="loadingText">Processing Board Data...</div>
+          <div class="progress-box">
+            <div class="progress-bar-fill" id="loadingBar"></div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted);" id="loadingPercent">0%</div>
+        </div>
 
         <!-- Device Entry Form Popup Modal -->
         <div id="deviceEntryModal">
@@ -461,22 +524,21 @@
               <span style="text-decoration: underline; cursor: pointer;">Options</span>
               <span style="margin-left: auto; text-decoration: underline; cursor: pointer;">Help</span>
             </div>
-            <div style="font-size: 10px; color: #404040;">Notes: Device entry configuration and pin attribute mapping.</div>
-            
+
             <div class="form-row">
-              <label style="width: 90px;">Device Type:</label>
+              <label style="width: 90px; color: var(--text-muted);">Device Type:</label>
               <input type="text" id="modalDeviceType" value="Pin Library" readonly style="flex: 0.5;">
             </div>
             <div class="form-row">
-              <label style="width: 90px;">Designator:</label>
-              <input type="text" id="modalDesignator" value="u901">
-              <button class="win-btn">Find</button>
+              <label style="width: 90px; color: var(--text-muted);">Designator:</label>
+              <input type="text" id="modalDesignator" value="U1">
+              <button class="modern-btn">Find</button>
             </div>
             <div class="form-row">
-              <label style="width: 90px;">Part Number:</label>
-              <input type="text" id="modalPartNumber" value="tm4c1292ncpdti3r">
-              <span style="font-weight: bold;">Placed:</span> <button class="win-btn" style="padding: 2px 8px;">Yes</button>
-              <span style="font-weight: bold;">Side Of Board:</span> <button class="win-btn" id="modalSideBtn" style="padding: 2px 8px;">Bottom</button>
+              <label style="width: 90px; color: var(--text-muted);">Part Number:</label>
+              <input type="text" id="modalPartNumber" value="IC Chip">
+              <span style="font-weight: 600;">Placed:</span> <button class="modern-btn" style="padding: 2px 8px;">Yes</button>
+              <span style="font-weight: 600; margin-left: 6px;">Side:</span> <button class="modern-btn" id="modalSideBtn" style="padding: 2px 8px;">Bottom</button>
             </div>
 
             <!-- Pin Table View -->
@@ -497,10 +559,9 @@
             </div>
 
             <div class="modal-buttons">
-              <button class="win-btn" id="modalConnectedPinBtn" style="width: 120px; background: #f59e0b; color: black;">Connected Pins</button>
-              <button class="win-btn" style="width: 100px;">Replace Device</button>
-              <button class="win-btn" style="width: 100px;">Delete Device</button>
-              <button class="win-btn" id="modalCloseBtn" style="width: 70px;">Close</button>
+              <button class="modern-btn" id="modalConnectedPinBtn" style="background: var(--accent-yellow); color: black;">Highlight Connected Pins</button>
+              <button class="modern-btn">Replace</button>
+              <button class="modern-btn" id="modalCloseBtn">Close</button>
             </div>
           </div>
         </div>
@@ -534,11 +595,16 @@
       dragStart: { x: 0, y: 0 },
       selectedPin: null,
       selectedComponent: null,
-      highlightedNode: null,
-      previousTransforms: []
+      highlightedNode: null
     };
 
     let dragStartPos = { x: 0, y: 0 };
+    let renderRequested = false;
+
+    // Offscreen Canvas Cache for Overview Mini-Map
+    const overviewCacheCanvas = document.createElement('canvas');
+    const overviewCacheCtx = overviewCacheCanvas.getContext('2d');
+    let overviewCacheValid = false;
 
     const viewport = document.getElementById('viewport');
     const mainCanvas = document.getElementById('mainCanvas');
@@ -546,16 +612,41 @@
     const overviewCanvas = document.getElementById('overviewCanvas');
     const overviewCtx = overviewCanvas.getContext('2d');
 
+    // Progress Overlay Control
+    function updateProgress(title, percent) {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      document.getElementById('loadingText').innerText = title;
+      document.getElementById('loadingBar').style.width = percent + '%';
+      document.getElementById('loadingPercent').innerText = percent + '%';
+    }
+
+    function hideProgress() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // 60FPS Frame Scheduler
+    function scheduleRender() {
+      if (!renderRequested) {
+        renderRequested = true;
+        requestAnimationFrame(() => {
+          renderRequested = false;
+          render();
+        });
+      }
+    }
+
     function resizeCanvas() {
       mainCanvas.width = viewport.clientWidth;
       mainCanvas.height = viewport.clientHeight;
       overviewCanvas.width = overviewCanvas.parentElement.clientWidth;
       overviewCanvas.height = overviewCanvas.parentElement.clientHeight;
-      render();
+      overviewCacheCanvas.width = overviewCanvas.width;
+      overviewCacheCanvas.height = overviewCanvas.height;
+      overviewCacheValid = false;
+      scheduleRender();
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Check if pin is currently visible according to features checkboxes
     function isPinVisible(pin) {
       const isTopPin = pin.side === 'TOP' || pin.side === 'BOTH';
       const isBottomPin = pin.side === 'BOTTOM' || pin.side === 'BOTH';
@@ -566,47 +657,74 @@
       return showTopPin || showBottomPin;
     }
 
-    // Parse Netlist Master "board" File
+    // High-Speed Robust Netlist Parser (Supports both DEVICES and CONNECTIONS blocks)
     function parseBoardNetlist(text) {
       const devNetMap = {};
       const lines = text.split('\n');
       let inDevices = false;
+      let inConnections = false;
       let currentDev = null;
+      let currentNet = null;
 
-      for (let line of lines) {
-        let trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line || line.charCodeAt(0) === 33 || line.startsWith('!')) continue;
 
-        if (/^DEVICES\b/i.test(trimmed)) {
+        let upper = line.toUpperCase();
+
+        if (upper === 'DEVICES' || upper.startsWith('DEVICES;')) {
           inDevices = true;
+          inConnections = false;
           currentDev = null;
           continue;
         }
 
-        if (inDevices) {
-          if (/^(CONNECTIONS|BOUNDARY|RESISTOR|CAPACITOR|PIN LIBRARY|CONNECTOR|END)\b/i.test(trimmed)) {
+        if (upper === 'CONNECTIONS' || upper.startsWith('CONNECTIONS;')) {
+          inConnections = true;
+          inDevices = false;
+          currentNet = null;
+          continue;
+        }
+
+        if (inDevices || inConnections) {
+          if (upper === 'END' || upper.startsWith('BOUNDARY SCAN') || upper.startsWith('GPRELAY') || upper.startsWith('FIXED NODE')) {
             inDevices = false;
-            currentDev = null;
+            inConnections = false;
             continue;
           }
+        }
 
-          if (trimmed.includes('.')) {
-            if (currentDev) {
-              let clean = trimmed.replace(/;$/, '').trim();
-              let dotIndex = clean.indexOf('.');
-              if (dotIndex > 0) {
-                let pinNum = clean.substring(0, dotIndex).trim().toUpperCase();
-                let netName = clean.substring(dotIndex + 1).trim();
-                devNetMap[currentDev][pinNum] = netName;
-              }
+        if (inDevices) {
+          let dotIdx = line.indexOf('.');
+          if (dotIdx > 0 && currentDev) {
+            let clean = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
+            let pinNum = clean.substring(0, dotIdx).trim().toUpperCase();
+            let netName = clean.substring(dotIdx + 1).trim();
+            if (!devNetMap[currentDev]) devNetMap[currentDev] = {};
+            devNetMap[currentDev][pinNum] = netName;
+          } else {
+            let devName = line.endsWith(';') ? line.slice(0, -1).trim().toUpperCase() : line.toUpperCase();
+            if (devName && !devName.includes(' ')) {
+              currentDev = devName;
+              if (!devNetMap[currentDev]) devNetMap[currentDev] = {};
+            }
+          }
+        }
+
+        if (inConnections) {
+          let dotIdx = line.indexOf('.');
+          if (dotIdx > 0) {
+            let clean = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
+            let devName = clean.substring(0, dotIdx).trim().toUpperCase();
+            let pinNum = clean.substring(dotIdx + 1).trim().toUpperCase();
+            if (currentNet && devName && pinNum) {
+              if (!devNetMap[devName]) devNetMap[devName] = {};
+              devNetMap[devName][pinNum] = currentNet;
             }
           } else {
-            let devName = trimmed.replace(/;$/, '').trim().toUpperCase();
-            if (devName && !/^(END|CONNECTIONS)\b/i.test(devName)) {
-              currentDev = devName;
-              if (!devNetMap[currentDev]) {
-                devNetMap[currentDev] = {};
-              }
+            let netName = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
+            if (netName) {
+              currentNet = netName;
             }
           }
         }
@@ -614,79 +732,57 @@
       return devNetMap;
     }
 
-    // Parsing Agilent 3070 Board Layout File (board_xy)
+    // High-Speed Layout Parser
     function parseBoardXY(text) {
       const nodes = [];
-      const outline = [];
+      const outlinePaths = [];
+      let currentOutlinePath = [];
       const components = {};
       const deviceSideMap = {};
       const allPins = [];
       const nodeMap = {};
 
       const lines = text.split('\n');
-
-      let inDevices = false;
-      for (let line of lines) {
-        let trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
-
-        if (/^DEVICES/i.test(trimmed)) {
-          inDevices = true;
-          continue;
-        }
-        if (inDevices) {
-          if (/^END/i.test(trimmed) || /^NODE/i.test(trimmed) || /^OTHER/i.test(trimmed) || /^OUTLINE/i.test(trimmed)) {
-            inDevices = false;
-          } else {
-            const devMatch = trimmed.match(/^([A-Z0-9_\-]+)\s+(TOP|BOTTOM);?/i);
-            if (devMatch) {
-              deviceSideMap[devMatch[1].toUpperCase()] = devMatch[2].toUpperCase();
-            }
-          }
-        }
-      }
-
-      function getOrCreateComponent(compName, defaultSide) {
-        const nameUpper = compName.toUpperCase();
-        if (!components[nameUpper]) {
-          const side = deviceSideMap[nameUpper] || defaultSide || 'BOTTOM';
-          components[nameUpper] = {
-            name: nameUpper,
-            side: side,
-            pins: []
-          };
-        }
-        return components[nameUpper];
-      }
-
       let currentSection = null;
       let currentNode = null;
 
-      for (let line of lines) {
-        let trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) continue;
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line || line.charCodeAt(0) === 33) continue;
 
-        if (/^(BOARD_)?OUTLINE/i.test(trimmed)) {
+        let upper = line.toUpperCase();
+
+        if (upper.startsWith('OUTLINE') || upper.startsWith('BOARD_OUTLINE')) {
+          if (currentOutlinePath.length > 0) {
+            outlinePaths.push(currentOutlinePath);
+            currentOutlinePath = [];
+          }
           currentSection = 'OUTLINE';
           currentNode = null;
-          const parts = trimmed.split(/\s+/);
-          if (parts.length > 1) {
-            const matches = parts.slice(1).join(' ').matchAll(/(-?\d+),\s*(-?\d+)/g);
-            for (const m of matches) {
-              outline.push({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) });
+          parseOutlineCoords(line, currentOutlinePath);
+          if (line.includes(';')) {
+            if (currentOutlinePath.length > 0) {
+              outlinePaths.push(currentOutlinePath);
+              currentOutlinePath = [];
             }
           }
           continue;
         }
 
-        if (/^NODE\b/i.test(trimmed)) {
+        if (upper.startsWith('NODE')) {
+          if (currentOutlinePath.length > 0) {
+            outlinePaths.push(currentOutlinePath);
+            currentOutlinePath = [];
+          }
           currentSection = 'NODE';
-          const match = trimmed.match(/^NODE\s+["']?([^"'\s;]+)["']?/i);
-          const nodeName = match ? match[1] : 'UNKNOWN';
+          let parts = line.split(/\s+/);
+          let nodeName = parts[1] ? parts[1].replace(/["']/g, '') : 'UNKNOWN';
 
           if (!nodeMap[nodeName]) {
             currentNode = { name: nodeName, pins: [] };
             nodeMap[nodeName] = currentNode;
+            nodeMap[nodeName.toLowerCase()] = currentNode;
+            nodeMap[nodeName.toUpperCase()] = currentNode;
             nodes.push(currentNode);
           } else {
             currentNode = nodeMap[nodeName];
@@ -694,117 +790,159 @@
           continue;
         }
 
-        if (/^OTHER\b/i.test(trimmed)) {
+        if (upper.startsWith('OTHER')) {
+          if (currentOutlinePath.length > 0) {
+            outlinePaths.push(currentOutlinePath);
+            currentOutlinePath = [];
+          }
           currentSection = 'OTHER';
           currentNode = null;
           continue;
         }
 
-        if (/^DEVICES\b/i.test(trimmed)) {
+        if (upper.startsWith('DEVICES')) {
+          if (currentOutlinePath.length > 0) {
+            outlinePaths.push(currentOutlinePath);
+            currentOutlinePath = [];
+          }
           currentSection = 'DEVICES';
           currentNode = null;
           continue;
         }
 
-        if (/^(UNITS|SCALE|END)\b/i.test(trimmed)) {
-          if (/^END\b/i.test(trimmed)) {
+        if (upper.startsWith('END') || upper.startsWith('UNITS') || upper.startsWith('SCALE')) {
+          if (upper.startsWith('END')) {
+            if (currentOutlinePath.length > 0) {
+              outlinePaths.push(currentOutlinePath);
+              currentOutlinePath = [];
+            }
             currentSection = null;
             currentNode = null;
           }
           continue;
         }
 
-        if (currentSection === 'OUTLINE') {
-          const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)/);
-          if (coordMatch) {
-            outline.push({ x: parseInt(coordMatch[1], 10), y: parseInt(coordMatch[2], 10) });
+        if (currentSection === 'DEVICES') {
+          let parts = line.split(/\s+/);
+          if (parts.length >= 2) {
+            let dName = parts[0].replace(';', '').toUpperCase();
+            let dSide = parts[1].replace(';', '').toUpperCase();
+            if (dSide === 'TOP' || dSide === 'BOTTOM') {
+              deviceSideMap[dName] = dSide;
+            }
+          }
+        } else if (currentSection === 'OUTLINE') {
+          parseOutlineCoords(line, currentOutlinePath);
+          if (line.includes(';')) {
+            if (currentOutlinePath.length > 0) {
+              outlinePaths.push(currentOutlinePath);
+              currentOutlinePath = [];
+            }
           }
         } else if (currentSection === 'NODE' || currentSection === 'OTHER') {
-          const coordMatch = trimmed.match(/(-?\d+),\s*(-?\d+)\s*([^;]*)/);
-          if (coordMatch) {
-            const x = parseInt(coordMatch[1], 10);
-            const y = parseInt(coordMatch[2], 10);
-            const meta = coordMatch[3] || '';
+          let commaIdx = line.indexOf(',');
+          if (commaIdx !== -1) {
+            let x = parseInt(line.substring(0, commaIdx), 10);
+            let rest = line.substring(commaIdx + 1).trim();
+            let spaceIdx = rest.search(/\s/);
+            let yStr = spaceIdx === -1 ? rest : rest.substring(0, spaceIdx);
+            let meta = spaceIdx === -1 ? '' : rest.substring(spaceIdx + 1);
+            let y = parseInt(yStr, 10);
 
-            const compMatch = meta.match(/([A-Z0-9_\-]+)\.([A-Z0-9_\-]+)/i);
-            let compRef = '';
-            let componentName = '';
-            let pinNum = '';
+            if (!isNaN(x) && !isNaN(y)) {
+              let compRef = '', componentName = '', pinNum = '';
+              let dotIdx = meta.indexOf('.');
+              if (dotIdx !== -1) {
+                let metaParts = meta.split(/\s+/);
+                for (let p of metaParts) {
+                  let d = p.indexOf('.');
+                  if (d !== -1) {
+                    componentName = p.substring(0, d).toUpperCase();
+                    pinNum = p.substring(d + 1).toUpperCase();
+                    compRef = `${componentName}.${pinNum}`;
+                    break;
+                  }
+                }
+              }
 
-            if (compMatch) {
-              componentName = compMatch[1].toUpperCase();
-              pinNum = compMatch[2].toUpperCase();
-              compRef = `${componentName}.${pinNum}`;
+              let side = 'BOTTOM';
+              if (meta.includes('TOP')) side = 'TOP';
+              else if (meta.includes('BOTTOM')) side = 'BOTTOM';
+              else if (componentName && deviceSideMap[componentName]) side = deviceSideMap[componentName];
+
+              let access = 'NO_PROBE';
+              if (meta.includes('MANDATORY')) access = 'MANDATORY';
+              else if (meta.includes('CRITICAL')) access = 'CRITICAL';
+
+              let nodeName = (currentNode && currentSection === 'NODE') ? currentNode.name : 'UNCONNECTED';
+
+              const pinObj = { x, y, side, ref: compRef, component: componentName, pinNum, nodeName, access };
+
+              if (currentNode && currentSection === 'NODE') {
+                currentNode.pins.push(pinObj);
+              }
+
+              if (componentName) {
+                if (!components[componentName]) {
+                  components[componentName] = {
+                    name: componentName,
+                    side: deviceSideMap[componentName] || side,
+                    pins: [],
+                    cachedBounds: null
+                  };
+                }
+                const comp = components[componentName];
+                comp.pins.push(pinObj);
+
+                if (!comp.cachedBounds) {
+                  comp.cachedBounds = { minX: x, maxX: x, minY: y, maxY: y };
+                } else {
+                  if (x < comp.cachedBounds.minX) comp.cachedBounds.minX = x;
+                  if (x > comp.cachedBounds.maxX) comp.cachedBounds.maxX = x;
+                  if (y < comp.cachedBounds.minY) comp.cachedBounds.minY = y;
+                  if (y > comp.cachedBounds.maxY) comp.cachedBounds.maxY = y;
+                }
+              }
+
+              allPins.push(pinObj);
             }
-
-            let side = 'BOTTOM';
-            if (/\bTOP\b/i.test(meta)) {
-              side = 'TOP';
-            } else if (/\bBOTTOM\b/i.test(meta)) {
-              side = 'BOTTOM';
-            } else if (componentName && deviceSideMap[componentName]) {
-              side = deviceSideMap[componentName];
-            }
-
-            let access = 'NO_PROBE';
-            if (/\bMANDATORY\b/i.test(meta)) access = 'MANDATORY';
-            else if (/\bCRITICAL\b/i.test(meta)) access = 'CRITICAL';
-
-            let nodeName = (currentNode && currentSection === 'NODE') ? currentNode.name : 'UNCONNECTED';
-
-            const pinObj = {
-              x, y,
-              side,
-              ref: compRef,
-              component: componentName,
-              pinNum: pinNum,
-              nodeName: nodeName,
-              access: access
-            };
-
-            if (currentNode && currentSection === 'NODE') {
-              currentNode.pins.push(pinObj);
-            }
-
-            if (componentName) {
-              const comp = getOrCreateComponent(componentName, side);
-              comp.pins.push(pinObj);
-            }
-
-            allPins.push(pinObj);
           }
         }
       }
 
-      return { nodes, outline, components, allPins, nodeMap };
-    }
+      if (currentOutlinePath.length > 0) outlinePaths.push(currentOutlinePath);
 
-    // Calculate real Component Body Bounding Box
-    function getComponentBounds(comp) {
-      if (!comp || !comp.pins || comp.pins.length === 0) return null;
-
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-
-      comp.pins.forEach(pin => {
-        if (pin.x < minX) minX = pin.x;
-        if (pin.x > maxX) maxX = pin.x;
-        if (pin.y < minY) minY = pin.y;
-        if (pin.y > maxY) maxY = pin.y;
+      // Finalize Component Bounding Box Padding
+      Object.values(components).forEach(comp => {
+        if (comp.cachedBounds) {
+          const pad = 200;
+          comp.cachedBounds = {
+            x: comp.cachedBounds.minX - pad,
+            y: comp.cachedBounds.minY - pad,
+            w: (comp.cachedBounds.maxX - comp.cachedBounds.minX) + (pad * 2),
+            h: (comp.cachedBounds.maxY - comp.cachedBounds.minY) + (pad * 2),
+            minX: comp.cachedBounds.minX - pad,
+            maxX: comp.cachedBounds.maxX + pad,
+            minY: comp.cachedBounds.minY - pad,
+            maxY: comp.cachedBounds.maxY + pad
+          };
+        }
       });
 
-      const pad = 200;
-      const width = (maxX - minX) + (pad * 2);
-      const height = (maxY - minY) + (pad * 2);
-
-      return {
-        x: minX - pad,
-        y: minY - pad,
-        w: width,
-        h: height
-      };
+      return { nodes, outline: outlinePaths, components, allPins, nodeMap };
     }
 
-    // Merge Netlist Map into Layout Pins
+    function parseOutlineCoords(line, path) {
+      let matches = line.matchAll(/(-?\d+),\s*(-?\d+)/g);
+      for (let m of matches) {
+        path.push({ x: parseInt(m[1], 10), y: parseInt(m[2], 10) });
+      }
+    }
+
+    function getComponentBounds(comp) {
+      return comp ? comp.cachedBounds : null;
+    }
+
     function applyNetlistToPins() {
       if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return 0;
 
@@ -820,10 +958,13 @@
             if (!state.nodeMap[realNetName]) {
               const newNode = { name: realNetName, pins: [] };
               state.nodeMap[realNetName] = newNode;
+              state.nodeMap[realNetName.toLowerCase()] = newNode;
+              state.nodeMap[realNetName.toUpperCase()] = newNode;
               state.nodes.push(newNode);
             }
-            if (!state.nodeMap[realNetName].pins.includes(pin)) {
-              state.nodeMap[realNetName].pins.push(pin);
+            const nodeObj = state.nodeMap[realNetName];
+            if (!nodeObj.pins.includes(pin)) {
+              nodeObj.pins.push(pin);
             }
           }
         }
@@ -833,7 +974,7 @@
       return mappedCount;
     }
 
-    function calculateBounds(allPins, outline = []) {
+    function calculateBounds(allPins, outlinePaths = []) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
       allPins.forEach(pin => {
@@ -843,12 +984,14 @@
         if (pin.y > maxY) maxY = pin.y;
       });
 
-      if (outline && outline.length > 0) {
-        outline.forEach(pt => {
-          if (pt.x < minX) minX = pt.x;
-          if (pt.x > maxX) maxX = pt.x;
-          if (pt.y < minY) minY = pt.y;
-          if (pt.y > maxY) maxY = pt.y;
+      if (outlinePaths && outlinePaths.length > 0) {
+        outlinePaths.forEach(path => {
+          path.forEach(pt => {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.y > maxY) maxY = pt.y;
+          });
         });
       }
 
@@ -857,6 +1000,7 @@
       state.bounds = { minX, maxX, minY, maxY };
       document.getElementById('statNodes').innerText = state.nodes.length;
       document.getElementById('statPins').innerText = allPins.length;
+      overviewCacheValid = false;
       resetView();
     }
 
@@ -871,10 +1015,10 @@
       state.transform.scale = Math.min(scaleX, scaleY);
       state.transform.x = margin + (mainCanvas.width - margin * 2 - boardWidth * state.transform.scale) / 2 - state.bounds.minX * state.transform.scale;
       state.transform.y = margin + (mainCanvas.height - margin * 2 - boardHeight * state.transform.scale) / 2 - state.bounds.minY * state.transform.scale;
-      render();
+      scheduleRender();
     }
 
-    // AUTOMATIC SINGLE FOLDER PARSER
+    // FAST FOLDER LOADER
     document.getElementById('folderInput').addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
       if (!files.length) return;
@@ -889,45 +1033,84 @@
                       files.find(f => f.name.toLowerCase().endsWith('.board'));
 
       if (!xyFile) {
-        document.getElementById('folderStatus').innerHTML = `<span style="color:red; font-weight:bold;">❌ Error: 'board_xy' layout file not found in "${folderName}".</span>`;
+        document.getElementById('folderStatus').innerHTML = `<span style="color:#ef4444; font-weight:600;">❌ Error: 'board_xy' layout file not found in "${folderName}".</span>`;
         return;
       }
 
       document.getElementById('titleText').innerText = 'Agilent Board Graphics Viewer: ' + folderName;
-      document.getElementById('folderStatus').innerHTML = `⏳ Loading <b>${folderName}</b>...`;
+      updateProgress("Loading Board Layout...", 20);
 
-      const readerXY = new FileReader();
-      readerXY.onload = (evt) => {
-        state.fileText = evt.target.result;
-        const parsed = parseBoardXY(state.fileText);
-        state.nodes = parsed.nodes;
-        state.nodeMap = parsed.nodeMap;
-        state.components = parsed.components;
-        state.allPins = parsed.allPins;
-        state.boardOutline = parsed.outline;
+      setTimeout(() => {
+        const readerXY = new FileReader();
+        readerXY.onload = (evt) => {
+          updateProgress("Parsing Geometry...", 50);
+          setTimeout(() => {
+            state.fileText = evt.target.result;
+            const parsed = parseBoardXY(state.fileText);
+            state.nodes = parsed.nodes;
+            state.nodeMap = parsed.nodeMap;
+            state.components = parsed.components;
+            state.allPins = parsed.allPins;
+            state.boardOutline = parsed.outline;
 
-        let statusText = `<b>Folder: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
+            let statusText = `<b>Model: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
 
-        if (boardFile) {
-          const readerBoard = new FileReader();
-          readerBoard.onload = (bEvt) => {
-            state.netlistMap = parseBoardNetlist(bEvt.target.result);
-            const mappedCount = applyNetlistToPins();
-            statusText += `<br>✓ Netlist: <code>${boardFile.name}</code> (${mappedCount} nets mapped)`;
-            document.getElementById('folderStatus').innerHTML = statusText;
-            calculateBounds(state.allPins, state.boardOutline);
-          };
-          readerBoard.readAsText(boardFile);
-        } else {
-          statusText += `<br><span style="color:#666;">⚠ Netlist: 'board' file not found</span>`;
-          document.getElementById('folderStatus').innerHTML = statusText;
-          calculateBounds(state.allPins, state.boardOutline);
-        }
-      };
-      readerXY.readAsText(xyFile);
+            if (boardFile) {
+              updateProgress("Parsing Netlist...", 80);
+              setTimeout(() => {
+                const readerBoard = new FileReader();
+                readerBoard.onload = (bEvt) => {
+                  state.netlistMap = parseBoardNetlist(bEvt.target.result);
+                  const mappedCount = applyNetlistToPins();
+                  statusText += `<br>✓ Netlist: <code>${boardFile.name}</code> (${mappedCount} nets mapped)`;
+                  document.getElementById('folderStatus').innerHTML = statusText;
+                  calculateBounds(state.allPins, state.boardOutline);
+                  hideProgress();
+                };
+                readerBoard.readAsText(boardFile);
+              }, 10);
+            } else {
+              statusText += `<br><span style="color:#94a3b8;">⚠ Netlist: 'board' file not found</span>`;
+              document.getElementById('folderStatus').innerHTML = statusText;
+              calculateBounds(state.allPins, state.boardOutline);
+              hideProgress();
+            }
+          }, 10);
+        };
+        readerXY.readAsText(xyFile);
+      }, 10);
     });
 
-    // Render Canvas Routine
+    function getVisibleWorldBounds() {
+      const w = mainCanvas.width;
+      const h = mainCanvas.height;
+      const scale = state.transform.scale;
+      const tx = state.transform.x;
+      const ty = state.transform.y;
+
+      let y1 = (ty - 0) / scale;
+      let y2 = (ty - h) / scale;
+      let minY = Math.min(y1, y2) - 500;
+      let maxY = Math.max(y1, y2) + 500;
+
+      let minX, maxX;
+      if (state.currentSide === 'BOTTOM') {
+        const boardCenterX = (state.bounds.minX + state.bounds.maxX) / 2;
+        let x1 = boardCenterX * 2 - (0 - tx) / scale;
+        let x2 = boardCenterX * 2 - (w - tx) / scale;
+        minX = Math.min(x1, x2) - 500;
+        maxX = Math.max(x1, x2) + 500;
+      } else {
+        let x1 = (0 - tx) / scale;
+        let x2 = (w - tx) / scale;
+        minX = Math.min(x1, x2) - 500;
+        maxX = Math.max(x1, x2) + 500;
+      }
+
+      return { minX, maxX, minY, maxY };
+    }
+
+    // High-Performance Render Loop
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
@@ -935,7 +1118,6 @@
       mainCtx.save();
       mainCtx.translate(state.transform.x, state.transform.y);
 
-      // Handle Mirroring for Bottom View vs Top View
       if (state.currentSide === 'BOTTOM') {
         const boardCenterX = (state.bounds.minX + state.bounds.maxX) / 2;
         mainCtx.translate(boardCenterX * state.transform.scale, 0);
@@ -945,35 +1127,52 @@
         mainCtx.scale(state.transform.scale, -state.transform.scale);
       }
 
-      // 1. Board Outline
+      const vBounds = getVisibleWorldBounds();
+
+      // 1. Board Outlines
       if (state.visibility.boardOutline) {
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
         if (state.boardOutline && state.boardOutline.length > 0) {
-          mainCtx.beginPath();
-          mainCtx.moveTo(state.boardOutline[0].x, state.boardOutline[0].y);
-          for (let i = 1; i < state.boardOutline.length; i++) {
-            mainCtx.lineTo(state.boardOutline[i].x, state.boardOutline[i].y);
-          }
-          mainCtx.closePath();
-          mainCtx.stroke();
+          state.boardOutline.forEach(path => {
+            if (path.length > 0) {
+              mainCtx.beginPath();
+              mainCtx.moveTo(path[0].x, path[0].y);
+              for (let i = 1; i < path.length; i++) {
+                mainCtx.lineTo(path[i].x, path[i].y);
+              }
+              mainCtx.closePath();
+              mainCtx.stroke();
+            }
+          });
         } else {
           const b = state.bounds;
           mainCtx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
         }
       }
 
-      // 2. Real Component Body Outlines
+      // 2. Component Body Outlines
       Object.values(state.components).forEach(comp => {
         const isTop = comp.side === 'TOP';
         const isBottom = comp.side === 'BOTTOM';
         const showComp = (isTop && state.visibility.topComp) || (isBottom && state.visibility.bottomComp);
+        const isSelectedComp = state.selectedComponent && comp.name === state.selectedComponent.name;
 
-        if (showComp && comp.pins.length > 0) {
+        if ((showComp || isSelectedComp) && comp.pins.length > 0) {
           const bounds = getComponentBounds(comp);
           if (bounds) {
-            mainCtx.lineWidth = 1.5 / state.transform.scale;
-            mainCtx.strokeStyle = isTop ? 'rgba(56, 189, 248, 0.8)' : 'rgba(244, 63, 94, 0.8)';
+            if (bounds.maxX < vBounds.minX || bounds.minX > vBounds.maxX || bounds.maxY < vBounds.minY || bounds.minY > vBounds.maxY) {
+              return;
+            }
+
+            mainCtx.lineWidth = (isSelectedComp ? 2.5 : 1.5) / state.transform.scale;
+            if (isSelectedComp) {
+              mainCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+              mainCtx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+              mainCtx.strokeStyle = '#f59e0b';
+            } else {
+              mainCtx.strokeStyle = isTop ? 'rgba(56, 189, 248, 0.7)' : 'rgba(244, 63, 94, 0.7)';
+            }
             mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
           }
         }
@@ -985,14 +1184,22 @@
       const halfW = pinWidth / 2;
       const halfH = pinHeight / 2;
 
-      state.allPins.forEach(pin => {
-        if (!isPinVisible(pin)) return;
+      for (let i = 0; i < state.allPins.length; i++) {
+        const pin = state.allPins[i];
 
-        const isHighlighted = (state.highlightedNode && pin.nodeName === state.highlightedNode.name) ||
-                              (state.selectedComponent && pin.component === state.selectedComponent.name);
+        if (!isPinVisible(pin)) continue;
 
-        if (isHighlighted) {
-          mainCtx.fillStyle = '#f59e0b'; // Yellow/Orange for Node Connection Highlight
+        if (pin.x < vBounds.minX || pin.x > vBounds.maxX || pin.y < vBounds.minY || pin.y > vBounds.maxY) {
+          continue;
+        }
+
+        const isNodeHighlighted = state.highlightedNode && pin.nodeName === state.highlightedNode.name;
+        const isCompHighlighted = state.selectedComponent && pin.component === state.selectedComponent.name;
+
+        if (isNodeHighlighted) {
+          mainCtx.fillStyle = '#f59e0b';
+        } else if (isCompHighlighted) {
+          mainCtx.fillStyle = '#10b981';
         } else if (pin.side === 'TOP') {
           mainCtx.fillStyle = '#38bdf8';
         } else {
@@ -1005,16 +1212,16 @@
           mainCtx.lineWidth = 3 / state.transform.scale;
           mainCtx.strokeRect(pin.x - 150, pin.y - 150, 300, 300);
         }
-      });
+      }
 
       mainCtx.restore();
-      renderOverview();
+      renderOverview(vBounds);
     }
 
-    function renderOverview() {
+    function renderOverview(vBounds) {
       const w = overviewCanvas.width;
       const h = overviewCanvas.height;
-      overviewCtx.clearRect(0, 0, w, h);
+      if (w <= 0 || h <= 0) return;
 
       const b = state.bounds;
       const boardW = b.maxX - b.minX;
@@ -1025,36 +1232,54 @@
       const offsetX = (w - boardW * scale) / 2;
       const offsetY = (h - boardH * scale) / 2;
 
-      overviewCtx.strokeStyle = '#334155';
-      if (state.boardOutline && state.boardOutline.length > 0) {
-        overviewCtx.beginPath();
-        for (let i = 0; i < state.boardOutline.length; i++) {
-          const mx = offsetX + (state.boardOutline[i].x - b.minX) * scale;
-          const my = h - (offsetY + (state.boardOutline[i].y - b.minY) * scale);
-          if (i === 0) overviewCtx.moveTo(mx, my);
-          else overviewCtx.lineTo(mx, my);
+      if (!overviewCacheValid) {
+        overviewCacheCtx.clearRect(0, 0, w, h);
+        overviewCacheCtx.strokeStyle = '#334155';
+        if (state.boardOutline && state.boardOutline.length > 0) {
+          state.boardOutline.forEach(path => {
+            if (path.length > 0) {
+              overviewCacheCtx.beginPath();
+              for (let i = 0; i < path.length; i++) {
+                const mx = offsetX + (path[i].x - b.minX) * scale;
+                const my = h - (offsetY + (path[i].y - b.minY) * scale);
+                if (i === 0) overviewCacheCtx.moveTo(mx, my);
+                else overviewCacheCtx.lineTo(mx, my);
+              }
+              overviewCacheCtx.closePath();
+              overviewCacheCtx.stroke();
+            }
+          });
         }
-        overviewCtx.closePath();
-        overviewCtx.stroke();
+
+        overviewCacheCtx.fillStyle = '#38bdf8';
+        for (let i = 0; i < state.allPins.length; i++) {
+          const pin = state.allPins[i];
+          const mx = offsetX + (pin.x - b.minX) * scale;
+          const my = h - (offsetY + (pin.y - b.minY) * scale);
+          overviewCacheCtx.fillRect(mx, my, 1, 1);
+        }
+        overviewCacheValid = true;
       }
 
-      overviewCtx.fillStyle = '#38bdf8';
-      state.allPins.forEach(pin => {
-        if (!isPinVisible(pin)) return;
-        const mx = offsetX + (pin.x - b.minX) * scale;
-        const my = h - (offsetY + (pin.y - b.minY) * scale);
-        overviewCtx.fillRect(mx, my, 1, 1);
-      });
+      overviewCtx.clearRect(0, 0, w, h);
+      overviewCtx.drawImage(overviewCacheCanvas, 0, 0);
+
+      if (vBounds) {
+        const vx1 = offsetX + (vBounds.minX - b.minX) * scale;
+        const vx2 = offsetX + (vBounds.maxX - b.minX) * scale;
+        const vy1 = h - (offsetY + (vBounds.maxY - b.minY) * scale);
+        const vy2 = h - (offsetY + (vBounds.minY - b.minY) * scale);
+
+        overviewCtx.strokeStyle = '#f59e0b';
+        overviewCtx.lineWidth = 1.5;
+        overviewCtx.strokeRect(Math.min(vx1, vx2), Math.min(vy1, vy2), Math.abs(vx2 - vx1), Math.abs(vy2 - vy1));
+      }
     }
 
-    // Accurate Hit-testing with Hidden Pins Ignored
-    function getPinAtMouse(clientX, clientY) {
+    function getObjectAtMouse(clientX, clientY) {
       const rect = mainCanvas.getBoundingClientRect();
       const clickX = clientX - rect.left;
       const clickY = clientY - rect.top;
-
-      let closest = null;
-      let minDist = 25;
 
       const scale = state.transform.scale;
       const tx = state.transform.x;
@@ -1062,9 +1287,13 @@
 
       const boardCenterX = (state.bounds.minX + state.bounds.maxX) / 2;
 
-      state.allPins.forEach(pin => {
-        // Skip hidden pins completely
-        if (!isPinVisible(pin)) return;
+      // 1. Check Pins First
+      let closestPin = null;
+      let minDist = 25;
+
+      for (let i = 0; i < state.allPins.length; i++) {
+        const pin = state.allPins[i];
+        if (!isPinVisible(pin)) continue;
 
         let worldX = pin.x;
         if (state.currentSide === 'BOTTOM') {
@@ -1077,10 +1306,38 @@
         const dist = Math.hypot(screenX - clickX, screenY - clickY);
         if (dist < minDist) {
           minDist = dist;
-          closest = { pin, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
+          closestPin = { type: 'pin', pin, worldX: Math.round(pin.x), worldY: Math.round(pin.y) };
         }
-      });
-      return closest;
+      }
+
+      if (closestPin) return closestPin;
+
+      // 2. Check Component Body Outlines
+      let trueWorldX = (clickX - tx) / scale;
+      let trueWorldY = (ty - clickY) / scale;
+      if (state.currentSide === 'BOTTOM') {
+        trueWorldX = boardCenterX * 2 - trueWorldX;
+      }
+
+      const compList = Object.values(state.components);
+      for (let i = 0; i < compList.length; i++) {
+        const comp = compList[i];
+        const isTop = comp.side === 'TOP';
+        const isBottom = comp.side === 'BOTTOM';
+        const showComp = (isTop && state.visibility.topComp) || (isBottom && state.visibility.bottomComp);
+
+        if (!showComp || !comp.pins.length) continue;
+
+        const bounds = getComponentBounds(comp);
+        if (bounds) {
+          if (trueWorldX >= bounds.minX && trueWorldX <= bounds.maxX &&
+              trueWorldY >= bounds.minY && trueWorldY <= bounds.maxY) {
+            return { type: 'component', comp, worldX: Math.round(trueWorldX), worldY: Math.round(trueWorldY) };
+          }
+        }
+      }
+
+      return null;
     }
 
     viewport.addEventListener('mousedown', (e) => {
@@ -1090,64 +1347,69 @@
     });
 
     viewport.addEventListener('mousemove', (e) => {
-      const hit = getPinAtMouse(e.clientX, e.clientY);
+      const hit = getObjectAtMouse(e.clientX, e.clientY);
       if (hit) {
         document.getElementById('cursorCoords').innerText = `Cursor: ${hit.worldX}, ${hit.worldY} Tenth Mils`;
       }
       if (!state.isDragging) return;
       state.transform.x = e.clientX - state.dragStart.x;
       state.transform.y = e.clientY - state.dragStart.y;
-      render();
+      scheduleRender();
     });
 
     window.addEventListener('mouseup', () => state.isDragging = false);
 
-    // Left Click Selection
     viewport.addEventListener('click', (e) => {
       const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
       if (dist < 5) {
-        const hit = getPinAtMouse(e.clientX, e.clientY);
+        const hit = getObjectAtMouse(e.clientX, e.clientY);
         if (hit) {
-          state.selectedPin = hit.pin;
-          state.selectedComponent = hit.pin.component ? state.components[hit.pin.component] : null;
+          if (hit.type === 'pin') {
+            state.selectedPin = hit.pin;
+            state.selectedComponent = hit.pin.component ? state.components[hit.pin.component] : null;
 
-          const pinStr = hit.pin.ref ? `Pin ${hit.pin.ref}` : `Location (${hit.worldX}, ${hit.worldY})`;
-          const compStr = hit.pin.component ? `Component "${hit.pin.component}"` : `No Component`;
-          const nodeStr = (hit.pin.nodeName && hit.pin.nodeName !== 'UNCONNECTED') ? `Node "${hit.pin.nodeName}"` : `Unconnected Net`;
+            const pinStr = hit.pin.ref ? `Pin ${hit.pin.ref}` : `Location (${hit.worldX}, ${hit.worldY})`;
+            const compStr = hit.pin.component ? `Component [${hit.pin.component}]` : `No Component`;
+            const nodeStr = (hit.pin.nodeName && hit.pin.nodeName !== 'UNCONNECTED') ? `Node "${hit.pin.nodeName}"` : `Unconnected Net`;
 
-          document.getElementById('notesBox').innerText = `Notes: Selected ${pinStr} | ${compStr} | ${nodeStr} on ${hit.pin.side} side.`;
-          render();
+            document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Selected ${compStr} | ${pinStr} | ${nodeStr} (${hit.pin.side} side)`;
+          } else if (hit.type === 'component') {
+            const comp = hit.comp;
+            state.selectedComponent = comp;
+            state.selectedPin = comp.pins[0] || null;
+
+            const uniqueNets = [...new Set(comp.pins.map(p => p.nodeName).filter(n => n && n !== 'UNCONNECTED'))];
+            document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Selected Component [${comp.name}] (${comp.pins.length} pins, ${comp.side} side) | Connected Nets: ${uniqueNets.slice(0, 4).join(', ')}${uniqueNets.length > 4 ? '...' : ''}`;
+          }
+          scheduleRender();
         }
       }
     });
 
-    // Right Click: Opens Modal and populates pin grid
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      const hit = getPinAtMouse(e.clientX, e.clientY);
+      const hit = getObjectAtMouse(e.clientX, e.clientY);
       if (hit) {
-        state.selectedPin = hit.pin;
+        const comp = hit.type === 'pin' ? (hit.pin.component ? state.components[hit.pin.component] : null) : hit.comp;
+        state.selectedComponent = comp;
+        if (hit.type === 'pin') state.selectedPin = hit.pin;
 
-        const compName = hit.pin.component;
-        const comp = compName ? state.components[compName] : null;
-
-        document.getElementById('modalDesignator').value = comp ? comp.name : (compName || 'N/A');
+        document.getElementById('modalDesignator').value = comp ? comp.name : 'N/A';
         document.getElementById('modalDeviceType').value = comp ? 'Pin Library' : 'N/A';
         document.getElementById('modalPartNumber').value = comp ? comp.name.toLowerCase() : 'N/A';
-        document.getElementById('modalSideBtn').innerText = comp ? comp.side : hit.pin.side;
+        document.getElementById('modalSideBtn').innerText = comp ? comp.side : 'BOTTOM';
 
         const tbody = document.getElementById('modalPinTableBody');
         tbody.innerHTML = '';
 
-        const pinsToList = comp ? comp.pins : [hit.pin];
+        const pinsToList = comp ? comp.pins : (hit.pin ? [hit.pin] : []);
 
         pinsToList.forEach(p => {
           const row = document.createElement('tr');
-          if (p === hit.pin) row.classList.add('selected-row');
+          if (p === state.selectedPin) row.classList.add('selected-row');
 
           row.innerHTML = `<td>${p.pinNum || p.ref || '1'}</td><td>${p.nodeName || 'UNCONNECTED'}</td><td>${p.access || 'No Probe'}</td><td>${p.side}</td>`;
 
-          // Clicking a row highlights that specific pin's connected node
           row.addEventListener('click', () => {
             Array.from(tbody.children).forEach(r => r.classList.remove('selected-row'));
             row.classList.add('selected-row');
@@ -1159,11 +1421,10 @@
         });
 
         document.getElementById('deviceEntryModal').style.display = 'block';
-        render();
+        scheduleRender();
       }
     });
 
-    // Helper: Highlight node connections for a specific pin
     function highlightPinNode(pin) {
       if (!pin || !pin.nodeName || pin.nodeName === 'UNCONNECTED') {
         state.highlightedNode = null;
@@ -1172,13 +1433,12 @@
         const foundNode = state.nodeMap[pin.nodeName] || state.nodes.find(n => n.name === pin.nodeName);
         if (foundNode) {
           state.highlightedNode = foundNode;
-          document.getElementById('notesBox').innerText = `Notes: Highlighted Node "${foundNode.name}" with ${foundNode.pins.length} connected pin(s).`;
+          document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Highlighted Node "${foundNode.name}" (${foundNode.pins.length} connected pins)`;
         }
       }
-      render();
+      scheduleRender();
     }
 
-    // "Connected Pins" Button Click Handler inside Device Entry Form
     document.getElementById('modalConnectedPinBtn').addEventListener('click', () => {
       if (state.selectedPin) {
         highlightPinNode(state.selectedPin);
@@ -1197,6 +1457,13 @@
     let isModalDragging = false;
     let modalDragOffset = { x: 0, y: 0 };
 
+    // Isolated Event Propagation to prevent viewport bleeding
+    ['mousedown', 'mouseup', 'mousemove', 'click', 'contextmenu', 'wheel'].forEach(evt => {
+      modal.addEventListener(evt, (e) => {
+        e.stopPropagation();
+      });
+    });
+
     modalTitleBar.addEventListener('mousedown', (e) => {
       isModalDragging = true;
       modalDragOffset.x = e.clientX - modal.offsetLeft;
@@ -1214,6 +1481,7 @@
       isModalDragging = false;
     });
 
+    // Instant O(1) Search Features
     function searchDevice() {
       const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
@@ -1222,9 +1490,11 @@
       if (comp && comp.pins.length > 0) {
         state.selectedComponent = comp;
         state.selectedPin = comp.pins[0];
-        document.getElementById('notesBox').innerText = `Notes: Component "${comp.name}" highlighted with ${comp.pins.length} pin(s) on ${comp.side} side.`;
+        
+        const connectedNets = [...new Set(comp.pins.map(p => p.nodeName).filter(n => n && n !== 'UNCONNECTED'))];
+        document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Highlighted Device [${comp.name}] (${comp.pins.length} pins, ${comp.side} side) | Connected Nets: ${connectedNets.slice(0, 5).join(', ')}${connectedNets.length > 5 ? '...' : ''}`;
         document.getElementById('modalDesignator').value = comp.name;
-        render();
+        scheduleRender();
       } else {
         document.getElementById('notesBox').innerText = `Notes: Device "${query}" not found.`;
       }
@@ -1234,13 +1504,15 @@
       const query = document.getElementById('searchNodeInput').value.trim();
       if (!query) return;
 
-      let foundNode = state.nodes.find(n => n.name.toLowerCase() === query.toLowerCase());
+      let foundNode = state.nodeMap[query] || state.nodeMap[query.toLowerCase()] || state.nodeMap[query.toUpperCase()];
 
       if (foundNode) {
         state.highlightedNode = foundNode;
         if (foundNode.pins.length > 0) state.selectedPin = foundNode.pins[0];
-        document.getElementById('notesBox').innerText = `Notes: Node "${foundNode.name}" highlighted with ${foundNode.pins.length} location(s).`;
-        render();
+        
+        const connectedDevs = [...new Set(foundNode.pins.map(p => p.component).filter(Boolean))];
+        document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Highlighted Node "${foundNode.name}" (${foundNode.pins.length} pins across ${connectedDevs.length} devices: ${connectedDevs.slice(0, 6).join(', ')}${connectedDevs.length > 6 ? '...' : ''})`;
+        scheduleRender();
       } else {
         document.getElementById('notesBox').innerText = `Notes: Node "${query}" not found.`;
       }
@@ -1253,26 +1525,26 @@
 
     document.getElementById('btnZoomIn').addEventListener('click', () => {
       state.transform.scale *= 1.25;
-      render();
+      scheduleRender();
     });
     document.getElementById('btnZoomOut').addEventListener('click', () => {
       state.transform.scale *= 0.8;
-      render();
+      scheduleRender();
     });
     document.getElementById('btnFullView').addEventListener('click', resetView);
-    document.getElementById('btnRedraw').addEventListener('click', render);
+    document.getElementById('btnRedraw').addEventListener('click', scheduleRender);
     
     document.getElementById('btnClearHighlights').addEventListener('click', () => {
       state.highlightedNode = null;
       state.selectedComponent = null;
       state.selectedPin = null;
       document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
-      render();
+      scheduleRender();
     });
 
     document.getElementById('viewSideSelect').addEventListener('change', (e) => {
       state.currentSide = e.target.value;
-      render();
+      scheduleRender();
     });
 
     viewport.addEventListener('wheel', (e) => {
@@ -1283,14 +1555,14 @@
       state.transform.x = mouseX - (mouseX - state.transform.x) * zoomFactor;
       state.transform.y = mouseY - (mouseY - state.transform.y) * zoomFactor;
       state.transform.scale *= zoomFactor;
-      render();
+      scheduleRender();
     }, { passive: false });
 
-    document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; render(); });
-    document.getElementById('chkTopXY').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; render(); });
-    document.getElementById('chkBottomXY').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; render(); });
-    document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; render(); });
-    document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; render(); });
+    document.getElementById('chkTopOutlines').addEventListener('change', (e) => { state.visibility.boardOutline = e.target.checked; overviewCacheValid = false; scheduleRender(); });
+    document.getElementById('chkTopXY').addEventListener('change', (e) => { state.visibility.topPins = e.target.checked; overviewCacheValid = false; scheduleRender(); });
+    document.getElementById('chkBottomXY').addEventListener('change', (e) => { state.visibility.bottomPins = e.target.checked; overviewCacheValid = false; scheduleRender(); });
+    document.getElementById('chkTopComp').addEventListener('change', (e) => { state.visibility.topComp = e.target.checked; overviewCacheValid = false; scheduleRender(); });
+    document.getElementById('chkBottomComp').addEventListener('change', (e) => { state.visibility.bottomComp = e.target.checked; overviewCacheValid = false; scheduleRender(); });
 
     resizeCanvas();
   </script>
