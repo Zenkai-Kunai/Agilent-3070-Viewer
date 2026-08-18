@@ -15,6 +15,8 @@
       --accent-pink: #f43f5e;
       --accent-green: #10b981;
       --accent-yellow: #f59e0b;
+      --accent-magenta: #ec4899;
+      --accent-red: #ef4444;
       --btn-bg: #334155;
       --btn-hover: #475569;
     }
@@ -146,14 +148,24 @@
       background: #1d4ed8;
     }
 
+    .modern-btn.warning {
+      background: #d97706;
+      border-color: #f59e0b;
+      color: #000;
+    }
+    .modern-btn.warning:hover {
+      background: #b45309;
+      color: #fff;
+    }
+
     /* Status & Notes Panel */
     .status-panel {
       background: #020617;
       border: 1px solid var(--panel-border);
-      padding: 10px;
-      border-radius: 8px;
-      min-height: 60px;
-      font-size: 11px;
+      padding: 0.5px;
+      border-radius: 5px;
+      min-height: 90px;
+      font-size: 15px;
       line-height: 1.4;
     }
 
@@ -241,7 +253,7 @@
       border-bottom: 1px solid var(--panel-border);
     }
 
-    select, input[type="text"] {
+    select, input[type="text"], textarea {
       background: #020617;
       border: 1px solid var(--panel-border);
       color: var(--text-main);
@@ -250,7 +262,7 @@
       outline: none;
     }
 
-    select:focus, input[type="text"]:focus {
+    select:focus, input[type="text"]:focus, textarea:focus {
       border-color: var(--accent-blue);
     }
 
@@ -268,43 +280,57 @@
       left: 0;
     }
 
-    /* Loading Overlay with Progress Bar */
+    /* Loading Overlay with Spinner & Progress Bar */
     #loadingOverlay {
       position: absolute;
       inset: 0;
-      background: rgba(2, 6, 23, 0.85);
-      backdrop-filter: blur(4px);
+      background: rgba(2, 6, 23, 0.9);
+      backdrop-filter: blur(6px);
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      z-index: 50;
+      gap: 14px;
+      z-index: 200;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(56, 189, 248, 0.2);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .progress-box {
-      width: 280px;
-      height: 10px;
+      width: 300px;
+      height: 12px;
       background: #1e293b;
-      border-radius: 5px;
+      border-radius: 6px;
       overflow: hidden;
       border: 1px solid var(--panel-border);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
     }
 
     .progress-bar-fill {
       width: 0%;
       height: 100%;
-      background: var(--accent-blue);
-      transition: width 0.05s linear;
+      background: linear-gradient(90deg, #2563eb, var(--accent-blue));
+      border-radius: 6px;
+      transition: width 0.08s ease-out;
     }
 
-    /* Modern Popup Modal (Device Entry Form) */
-    #deviceEntryModal {
+    /* Modern Popup Modals */
+    .modal-window {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 580px;
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
       border-radius: 12px;
@@ -313,6 +339,9 @@
       display: none;
       overflow: hidden;
     }
+
+    #deviceEntryModal { width: 580px; }
+    #shortFinderModal { width: 620px; }
 
     .modal-titlebar {
       background: #020617;
@@ -334,7 +363,7 @@
     }
 
     .pin-table-container {
-      height: 170px;
+      height: 180px;
       background: #020617;
       border: 1px solid var(--panel-border);
       border-radius: 6px;
@@ -413,6 +442,14 @@
         </div>
       </div>
 
+      <!-- Short Finder Entry Button -->
+      <div class="card-box">
+        <div class="card-title">Debugging Tools</div>
+        <button class="modern-btn warning" id="btnOpenShortFinder" style="width: 100%;">
+          ⚡ Open Short Finder Tool
+        </button>
+      </div>
+
       <!-- Action Buttons Grid -->
       <div class="action-buttons-grid">
         <button class="modern-btn" id="btnShowPanel">Show Panel</button>
@@ -474,7 +511,7 @@
           </div>
           <div style="display: flex; gap: 6px; align-items: center;">
             <span style="width: 50px; color: var(--text-muted);">Node:</span>
-            <input type="text" id="searchNodeInput" placeholder="e.g. DCOM" style="flex: 1;">
+            <input type="text" id="searchNodeInput" placeholder='e.g. "$1N1544"' style="flex: 1;">
             <button class="modern-btn" id="btnSearchNode" style="padding: 4px 10px;">Find</button>
           </div>
         </div>
@@ -503,8 +540,9 @@
       <div id="viewport">
         <canvas id="mainCanvas"></canvas>
 
-        <!-- Loading Overlay -->
+        <!-- Loading Overlay with Spinner and Progress Bar -->
         <div id="loadingOverlay">
+          <div class="spinner"></div>
           <div style="font-size: 14px; font-weight: 600; color: var(--accent-blue);" id="loadingText">Processing Board Data...</div>
           <div class="progress-box">
             <div class="progress-bar-fill" id="loadingBar"></div>
@@ -513,16 +551,21 @@
         </div>
 
         <!-- Device Entry Form Popup Modal -->
-        <div id="deviceEntryModal">
+        <div id="deviceEntryModal" class="modal-window">
           <div class="modal-titlebar" id="modalTitleBar">
             <span>Device Entry Form</span>
             <span style="cursor: pointer; padding: 0 4px;" id="closeModalBtn">✕</span>
           </div>
           <div class="modal-body">
-            <div class="modal-menu">
-              <span style="text-decoration: underline; cursor: pointer;">Actions</span>
-              <span style="text-decoration: underline; cursor: pointer;">Options</span>
-              <span style="margin-left: auto; text-decoration: underline; cursor: pointer;">Help</span>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px;">
+              <button class="modern-btn" id="modalConnectedDevsBtn" style="background: #2563eb; color: white; padding: 4px 10px; font-size: 11px;">
+                🔗 Connected Devices
+              </button>
+              <button class="modern-btn" id="modalCompPinsBtn" style="background: var(--btn-bg); color: var(--text-main); padding: 4px 10px; font-size: 11px; display: none;">
+                📋 Component Pins
+              </button>
+              <span id="modalNetInfoBadge" style="font-size: 11px; font-weight: 600; color: var(--accent-yellow);"></span>
             </div>
 
             <div class="form-row">
@@ -545,7 +588,7 @@
             <div class="pin-table-container">
               <table class="pin-grid">
                 <thead>
-                  <tr>
+                  <tr id="modalTableHeader">
                     <th>Pin</th>
                     <th>Node Name</th>
                     <th>Probe Access</th>
@@ -566,12 +609,59 @@
           </div>
         </div>
 
+        <!-- Short Finder Modal Window -->
+        <div id="shortFinderModal" class="modal-window">
+          <div class="modal-titlebar" id="shortModalTitleBar">
+            <span>⚡ ICT Short Finder Tool</span>
+            <span style="cursor: pointer; padding: 0 4px;" id="closeShortModalBtn">✕</span>
+          </div>
+          <div class="modal-body">
+            
+            <div style="font-size: 11px; color: var(--text-muted);">
+              Paste raw ICT Short failure log snippet OR enter From/To nodes manually to highlight shorted pins and suspect common ICs!
+            </div>
+
+            <!-- Log Snippet Paste Box -->
+            <div class="form-row" style="align-items: flex-start; flex-direction: column;">
+              <label style="font-weight: 600; color: var(--accent-blue);">Paste ICT Log Snippet:</label>
+              <textarea id="shortLogInput" rows="4" style="width: 100%; font-family: monospace; font-size: 10px;" placeholder='Paste {@RPT|Short #1...} log snippet here...'></textarea>
+            </div>
+
+            <div style="text-align: center; font-size: 10px; color: var(--text-muted); font-weight: 600;">— OR ENTER NODES MANUALLY —</div>
+
+            <div class="form-row">
+              <label style="width: 80px; color: var(--accent-yellow); font-weight: 600;">From Node:</label>
+              <input type="text" id="shortFromNodeInput" placeholder='e.g. "$3N7656" or $3N7656'>
+              
+              <label style="width: 70px; color: var(--accent-pink); font-weight: 600; margin-left: 8px;">To Node:</label>
+              <input type="text" id="shortToNodeInput" placeholder='e.g. "$3N21442" or $3N21442'>
+            </div>
+
+            <!-- Short Summary Details Panel -->
+            <div id="shortSummaryPanel" style="background: #020617; border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px; font-size: 11px; line-height: 1.5; display: none;">
+              <!-- Dynamically populated -->
+            </div>
+
+            <div class="modal-buttons">
+              <button class="modern-btn warning" id="btnHighlightShort">⚡ Parse & Highlight Short</button>
+              <button class="modern-btn" id="btnZoomToShort" style="background: #0284c7; color: white;">🔍 Zoom To Short</button>
+              <button class="modern-btn" id="btnCloseShortModal">Close</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
   </div>
 
   <script>
+    // Universal Quote Stripping Helper
+    function cleanNodeName(str) {
+      if (!str) return '';
+      return str.trim().replace(/^["']|["']$/g, '').replace(/["']/g, '').trim();
+    }
+
     // State Management
     const state = {
       fileText: '',
@@ -595,7 +685,9 @@
       dragStart: { x: 0, y: 0 },
       selectedPin: null,
       selectedComponent: null,
-      highlightedNode: null
+      highlightedNode: null,
+      modalViewMode: 'component',
+      shortHighlight: null // { fromNode, toNodes: [], commonDevices: [] }
     };
 
     let dragStartPos = { x: 0, y: 0 };
@@ -657,7 +749,7 @@
       return showTopPin || showBottomPin;
     }
 
-    // High-Speed Robust Netlist Parser (Supports both DEVICES and CONNECTIONS blocks)
+    // High-Speed Robust Netlist Parser
     function parseBoardNetlist(text) {
       const devNetMap = {};
       const lines = text.split('\n');
@@ -699,7 +791,7 @@
           if (dotIdx > 0 && currentDev) {
             let clean = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
             let pinNum = clean.substring(0, dotIdx).trim().toUpperCase();
-            let netName = clean.substring(dotIdx + 1).trim();
+            let netName = cleanNodeName(clean.substring(dotIdx + 1));
             if (!devNetMap[currentDev]) devNetMap[currentDev] = {};
             devNetMap[currentDev][pinNum] = netName;
           } else {
@@ -722,7 +814,7 @@
               devNetMap[devName][pinNum] = currentNet;
             }
           } else {
-            let netName = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
+            let netName = cleanNodeName(line.endsWith(';') ? line.slice(0, -1) : line);
             if (netName) {
               currentNet = netName;
             }
@@ -730,6 +822,18 @@
         }
       }
       return devNetMap;
+    }
+
+    // Helper: Register Node In Map with Multi-Key Lookup
+    function registerNodeInMap(rawName, nodeObj) {
+      if (!rawName) return;
+      const clean = cleanNodeName(rawName);
+
+      state.nodeMap[rawName] = nodeObj;
+      state.nodeMap[clean] = nodeObj;
+      state.nodeMap[clean.toLowerCase()] = nodeObj;
+      state.nodeMap[clean.toUpperCase()] = nodeObj;
+      state.nodeMap['"' + clean + '"'] = nodeObj;
     }
 
     // High-Speed Layout Parser
@@ -776,16 +880,15 @@
           }
           currentSection = 'NODE';
           let parts = line.split(/\s+/);
-          let nodeName = parts[1] ? parts[1].replace(/["']/g, '') : 'UNKNOWN';
+          let rawNodeName = parts[1] ? parts[1] : 'UNKNOWN';
+          let cleanName = cleanNodeName(rawNodeName);
 
-          if (!nodeMap[nodeName]) {
-            currentNode = { name: nodeName, pins: [] };
-            nodeMap[nodeName] = currentNode;
-            nodeMap[nodeName.toLowerCase()] = currentNode;
-            nodeMap[nodeName.toUpperCase()] = currentNode;
+          if (!nodeMap[cleanName]) {
+            currentNode = { name: cleanName, pins: [] };
+            registerNodeInMap(rawNodeName, currentNode);
             nodes.push(currentNode);
           } else {
-            currentNode = nodeMap[nodeName];
+            currentNode = nodeMap[cleanName];
           }
           continue;
         }
@@ -951,15 +1054,13 @@
         if (pin.component && pin.pinNum) {
           const compNets = state.netlistMap[pin.component];
           if (compNets && compNets[pin.pinNum]) {
-            const realNetName = compNets[pin.pinNum];
+            const realNetName = cleanNodeName(compNets[pin.pinNum]);
             pin.nodeName = realNetName;
             mappedCount++;
 
             if (!state.nodeMap[realNetName]) {
               const newNode = { name: realNetName, pins: [] };
-              state.nodeMap[realNetName] = newNode;
-              state.nodeMap[realNetName.toLowerCase()] = newNode;
-              state.nodeMap[realNetName.toUpperCase()] = newNode;
+              registerNodeInMap(realNetName, newNode);
               state.nodes.push(newNode);
             }
             const nodeObj = state.nodeMap[realNetName];
@@ -1110,7 +1211,7 @@
       return { minX, maxX, minY, maxY };
     }
 
-    // High-Performance Render Loop
+    // High-Performance Render Loop with Short Finder Focus Mode (Dimmed non-short elements)
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
@@ -1128,9 +1229,12 @@
       }
 
       const vBounds = getVisibleWorldBounds();
+      const isShortActive = !!state.shortHighlight;
 
       // 1. Board Outlines
       if (state.visibility.boardOutline) {
+        mainCtx.save();
+        mainCtx.globalAlpha = isShortActive ? 0.5 : 1.0; // Dim board outlines if Short Finder is active
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
         if (state.boardOutline && state.boardOutline.length > 0) {
@@ -1149,6 +1253,7 @@
           const b = state.bounds;
           mainCtx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
         }
+        mainCtx.restore();
       }
 
       // 2. Component Body Outlines
@@ -1157,23 +1262,37 @@
         const isBottom = comp.side === 'BOTTOM';
         const showComp = (isTop && state.visibility.topComp) || (isBottom && state.visibility.bottomComp);
         const isSelectedComp = state.selectedComponent && comp.name === state.selectedComponent.name;
+        const isShortSuspectComp = isShortActive && state.shortHighlight.commonDevices.includes(comp.name);
 
-        if ((showComp || isSelectedComp) && comp.pins.length > 0) {
+        if ((showComp || isSelectedComp || isShortSuspectComp) && comp.pins.length > 0) {
           const bounds = getComponentBounds(comp);
           if (bounds) {
             if (bounds.maxX < vBounds.minX || bounds.minX > vBounds.maxX || bounds.maxY < vBounds.minY || bounds.minY > vBounds.maxY) {
               return;
             }
 
-            mainCtx.lineWidth = (isSelectedComp ? 2.5 : 1.5) / state.transform.scale;
-            if (isSelectedComp) {
+            mainCtx.save();
+            if (isShortSuspectComp) {
+              mainCtx.globalAlpha = 1.0; // Maximum Brightness for Suspect IC
+              mainCtx.lineWidth = 3.5 / state.transform.scale;
+              mainCtx.fillStyle = 'rgba(239, 68, 68, 0.35)'; // Red glow fill
+              mainCtx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+              mainCtx.strokeStyle = '#ef4444'; // Bright Red
+              mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+            } else if (isSelectedComp) {
+              mainCtx.globalAlpha = 1.0;
+              mainCtx.lineWidth = 2.5 / state.transform.scale;
               mainCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
               mainCtx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
               mainCtx.strokeStyle = '#f59e0b';
+              mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
             } else {
+              mainCtx.globalAlpha = isShortActive ? 0.50 : 1.0; // Dim non-suspect components
+              mainCtx.lineWidth = 1.5 / state.transform.scale;
               mainCtx.strokeStyle = isTop ? 'rgba(56, 189, 248, 0.7)' : 'rgba(244, 63, 94, 0.7)';
+              mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
             }
-            mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+            mainCtx.restore();
           }
         }
       });
@@ -1184,6 +1303,10 @@
       const halfW = pinWidth / 2;
       const halfH = pinHeight / 2;
 
+      const sh = state.shortHighlight;
+      const cleanFromNode = sh ? cleanNodeName(sh.fromNode) : '';
+      const cleanToNodes = sh ? sh.toNodes.map(cleanNodeName) : [];
+
       for (let i = 0; i < state.allPins.length; i++) {
         const pin = state.allPins[i];
 
@@ -1193,25 +1316,51 @@
           continue;
         }
 
-        const isNodeHighlighted = state.highlightedNode && pin.nodeName === state.highlightedNode.name;
+        const cleanPinNode = cleanNodeName(pin.nodeName);
+        const isFromShortPin = sh && cleanPinNode && cleanPinNode === cleanFromNode;
+        const isToShortPin = sh && cleanPinNode && cleanToNodes.includes(cleanPinNode);
+
+        const isNodeHighlighted = state.highlightedNode && cleanNodeName(pin.nodeName) === cleanNodeName(state.highlightedNode.name);
         const isCompHighlighted = state.selectedComponent && pin.component === state.selectedComponent.name;
 
-        if (isNodeHighlighted) {
-          mainCtx.fillStyle = '#f59e0b';
-        } else if (isCompHighlighted) {
-          mainCtx.fillStyle = '#10b981';
-        } else if (pin.side === 'TOP') {
-          mainCtx.fillStyle = '#38bdf8';
+        mainCtx.save();
+        if (isFromShortPin) {
+          mainCtx.globalAlpha = 1.0; // FULL BRIGHTNESS
+          mainCtx.fillStyle = '#f59e0b'; // Amber Yellow
+          mainCtx.fillRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
+          mainCtx.strokeStyle = '#ffffff';
+          mainCtx.lineWidth = 1.5 / state.transform.scale;
+          mainCtx.strokeRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
+        } else if (isToShortPin) {
+          mainCtx.globalAlpha = 1.0; // FULL BRIGHTNESS
+          mainCtx.fillStyle = '#ec4899'; // Bright Magenta/Pink
+          mainCtx.fillRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
+          mainCtx.strokeStyle = '#ffffff';
+          mainCtx.lineWidth = 1.5 / state.transform.scale;
+          mainCtx.strokeRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
+        } else if (isShortActive) {
+          mainCtx.globalAlpha = 0.50; // DIM ALL OTHER UNRELATED PINS
+          if (isNodeHighlighted) mainCtx.fillStyle = '#f59e0b';
+          else if (isCompHighlighted) mainCtx.fillStyle = '#10b981';
+          else if (pin.side === 'TOP') mainCtx.fillStyle = '#38bdf8';
+          else mainCtx.fillStyle = '#f43f5e';
+          mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
         } else {
-          mainCtx.fillStyle = '#f43f5e';
+          mainCtx.globalAlpha = 1.0;
+          if (isNodeHighlighted) mainCtx.fillStyle = '#f59e0b';
+          else if (isCompHighlighted) mainCtx.fillStyle = '#10b981';
+          else if (pin.side === 'TOP') mainCtx.fillStyle = '#38bdf8';
+          else mainCtx.fillStyle = '#f43f5e';
+          mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
         }
-        mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
 
         if (state.selectedPin === pin) {
+          mainCtx.globalAlpha = 1.0;
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 3 / state.transform.scale;
           mainCtx.strokeRect(pin.x - 150, pin.y - 150, 300, 300);
         }
+        mainCtx.restore();
       }
 
       mainCtx.restore();
@@ -1394,35 +1543,83 @@
         state.selectedComponent = comp;
         if (hit.type === 'pin') state.selectedPin = hit.pin;
 
-        document.getElementById('modalDesignator').value = comp ? comp.name : 'N/A';
-        document.getElementById('modalDeviceType').value = comp ? 'Pin Library' : 'N/A';
-        document.getElementById('modalPartNumber').value = comp ? comp.name.toLowerCase() : 'N/A';
-        document.getElementById('modalSideBtn').innerText = comp ? comp.side : 'BOTTOM';
+        openDeviceEntryModal(comp, state.selectedPin);
+      }
+    });
 
-        const tbody = document.getElementById('modalPinTableBody');
-        tbody.innerHTML = '';
+    // Populate and Open Modal Window
+    function openDeviceEntryModal(comp, activePin) {
+      document.getElementById('modalDesignator').value = comp ? comp.name : 'N/A';
+      document.getElementById('modalDeviceType').value = comp ? 'Pin Library' : 'N/A';
+      document.getElementById('modalPartNumber').value = comp ? comp.name.toLowerCase() : 'N/A';
+      document.getElementById('modalSideBtn').innerText = comp ? comp.side : 'BOTTOM';
 
-        const pinsToList = comp ? comp.pins : (hit.pin ? [hit.pin] : []);
+      state.modalViewMode = 'component';
+      document.getElementById('modalCompPinsBtn').style.display = 'none';
+      document.getElementById('modalConnectedDevsBtn').style.display = 'inline-flex';
+      document.getElementById('modalNetInfoBadge').innerText = '';
 
-        pinsToList.forEach(p => {
-          const row = document.createElement('tr');
-          if (p === state.selectedPin) row.classList.add('selected-row');
+      renderModalTable(comp ? comp.pins : (activePin ? [activePin] : []), activePin);
 
-          row.innerHTML = `<td>${p.pinNum || p.ref || '1'}</td><td>${p.nodeName || 'UNCONNECTED'}</td><td>${p.access || 'No Probe'}</td><td>${p.side}</td>`;
+      document.getElementById('deviceEntryModal').style.display = 'block';
+      scheduleRender();
+    }
 
-          row.addEventListener('click', () => {
-            Array.from(tbody.children).forEach(r => r.classList.remove('selected-row'));
-            row.classList.add('selected-row');
-            state.selectedPin = p;
-            highlightPinNode(p);
-          });
+    function renderModalTable(pinsList, highlightPin) {
+      const tbody = document.getElementById('modalPinTableBody');
+      tbody.innerHTML = '';
 
-          tbody.appendChild(row);
+      pinsList.forEach(p => {
+        const row = document.createElement('tr');
+        if (p === highlightPin) row.classList.add('selected-row');
+
+        const firstCol = state.modalViewMode === 'connected_devices' ? (p.ref || `${p.component}.${p.pinNum}`) : (p.pinNum || p.ref || '1');
+
+        row.innerHTML = `<td>${firstCol}</td><td>${p.nodeName || 'UNCONNECTED'}</td><td>${p.access || 'No Probe'}</td><td>${p.side}</td>`;
+
+        row.addEventListener('click', () => {
+          Array.from(tbody.children).forEach(r => r.classList.remove('selected-row'));
+          row.classList.add('selected-row');
+          state.selectedPin = p;
+          state.selectedComponent = p.component ? state.components[p.component] : state.selectedComponent;
+          highlightPinNode(p);
         });
 
-        document.getElementById('deviceEntryModal').style.display = 'block';
-        scheduleRender();
+        tbody.appendChild(row);
+      });
+    }
+
+    // Toggle: Show All Connected Devices
+    document.getElementById('modalConnectedDevsBtn').addEventListener('click', () => {
+      const pin = state.selectedPin;
+      if (!pin || !pin.nodeName || pin.nodeName === 'UNCONNECTED') {
+        document.getElementById('modalNetInfoBadge').innerText = 'Unconnected Net';
+        return;
       }
+
+      state.modalViewMode = 'connected_devices';
+      document.getElementById('modalConnectedDevsBtn').style.display = 'none';
+      document.getElementById('modalCompPinsBtn').style.display = 'inline-flex';
+
+      const cleanNet = cleanNodeName(pin.nodeName);
+      const foundNode = state.nodeMap[cleanNet] || state.nodeMap[pin.nodeName] || state.nodes.find(n => cleanNodeName(n.name) === cleanNet);
+      const connectedPins = foundNode ? foundNode.pins : state.allPins.filter(p => cleanNodeName(p.nodeName) === cleanNet);
+
+      document.getElementById('modalNetInfoBadge').innerText = `Net: ${cleanNet} (${connectedPins.length} pins)`;
+
+      renderModalTable(connectedPins, pin);
+      highlightPinNode(pin);
+    });
+
+    // Toggle: Switch back to Component Pins Table
+    document.getElementById('modalCompPinsBtn').addEventListener('click', () => {
+      const comp = state.selectedComponent;
+      state.modalViewMode = 'component';
+      document.getElementById('modalCompPinsBtn').style.display = 'none';
+      document.getElementById('modalConnectedDevsBtn').style.display = 'inline-flex';
+      document.getElementById('modalNetInfoBadge').innerText = '';
+
+      renderModalTable(comp ? comp.pins : (state.selectedPin ? [state.selectedPin] : []), state.selectedPin);
     });
 
     function highlightPinNode(pin) {
@@ -1430,7 +1627,8 @@
         state.highlightedNode = null;
         document.getElementById('notesBox').innerText = `Notes: Selected pin ${pin.ref || 'pin'} is unconnected.`;
       } else {
-        const foundNode = state.nodeMap[pin.nodeName] || state.nodes.find(n => n.name === pin.nodeName);
+        const cleanNet = cleanNodeName(pin.nodeName);
+        const foundNode = state.nodeMap[cleanNet] || state.nodeMap[pin.nodeName] || state.nodes.find(n => cleanNodeName(n.name) === cleanNet);
         if (foundNode) {
           state.highlightedNode = foundNode;
           document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Highlighted Node "${foundNode.name}" (${foundNode.pins.length} connected pins)`;
@@ -1452,36 +1650,182 @@
       document.getElementById('deviceEntryModal').style.display = 'none';
     });
 
-    const modal = document.getElementById('deviceEntryModal');
-    const modalTitleBar = document.getElementById('modalTitleBar');
-    let isModalDragging = false;
-    let modalDragOffset = { x: 0, y: 0 };
+    // SHORT FINDER MODAL HANDLERS
+    document.getElementById('btnOpenShortFinder').addEventListener('click', () => {
+      document.getElementById('shortFinderModal').style.display = 'block';
+    });
+    document.getElementById('btnCloseShortModal').addEventListener('click', () => {
+      document.getElementById('shortFinderModal').style.display = 'none';
+    });
+    document.getElementById('closeShortModalBtn').addEventListener('click', () => {
+      document.getElementById('shortFinderModal').style.display = 'none';
+    });
 
-    // Isolated Event Propagation to prevent viewport bleeding
-    ['mousedown', 'mouseup', 'mousemove', 'click', 'contextmenu', 'wheel'].forEach(evt => {
-      modal.addEventListener(evt, (e) => {
-        e.stopPropagation();
+    // Quote-Agnostic Parse ICT Short Log Snippet / Manual Input & Highlight
+    function parseAndHighlightShort() {
+      const logText = document.getElementById('shortLogInput').value.trim();
+      let fromNode = cleanNodeName(document.getElementById('shortFromNodeInput').value);
+      let toNode = cleanNodeName(document.getElementById('shortToNodeInput').value);
+      let extraNodes = [];
+      let commonDevices = [];
+
+      // Auto-parse if log text is pasted
+      if (logText) {
+        const fromMatch = logText.match(/From:\s*["']?([^\s\t\n|'"]+)["']?/i);
+        if (fromMatch) fromNode = cleanNodeName(fromMatch[1]);
+
+        const toMatch = logText.match(/To:\s*["']?([^\s\t\n|'"]+)["']?/i);
+        if (toMatch) toNode = cleanNodeName(toMatch[1]);
+
+        // Search for extra nodes in log text
+        const nodeMatches = logText.matchAll(/(?:From:|To:|\s)\s*["']?([$+\-_A-Z0-9]{3,})["']?/gi);
+        for (const m of nodeMatches) {
+          let n = cleanNodeName(m[1]);
+          if (n !== fromNode && n !== toNode && !extraNodes.includes(n) && (state.nodeMap[n] || state.nodeMap['"' + n + '"'])) {
+            extraNodes.push(n);
+          }
+        }
+
+        // Search for Common Devices block in log text
+        const commonIdx = logText.indexOf('Common Devices:');
+        if (commonIdx !== -1) {
+          const sub = logText.substring(commonIdx + 15);
+          const devMatches = sub.matchAll(/\b([A-Z0-9_\-]+)\b/gi);
+          for (const dm of devMatches) {
+            let dev = dm[1].toUpperCase();
+            if (dev !== 'TOTAL' && dev !== 'OF' && dev !== 'NODES' && dev !== 'MESSAGE' && dev !== 'IS' && dev !== 'NONE' && state.components[dev]) {
+              if (!commonDevices.includes(dev)) commonDevices.push(dev);
+            }
+          }
+        }
+      }
+
+      if (!fromNode && !toNode) {
+        alert("Please enter From/To nodes or paste an ICT Short Log snippet!");
+        return;
+      }
+
+      // Quote-Agnostic Node Resolution
+      let normFromNode = (state.nodeMap[fromNode] || state.nodeMap[cleanNodeName(fromNode)])?.name || cleanNodeName(fromNode);
+      let normToNode = (state.nodeMap[toNode] || state.nodeMap[cleanNodeName(toNode)])?.name || cleanNodeName(toNode);
+
+      let allToNodes = [normToNode, ...extraNodes.map(cleanNodeName)];
+
+      // Automatically identify Common Suspect ICs if not explicitly in log text
+      if (commonDevices.length === 0) {
+        const fromNodeObj = state.nodeMap[normFromNode] || state.nodeMap[cleanNodeName(normFromNode)];
+        const toNodeObj = state.nodeMap[normToNode] || state.nodeMap[cleanNodeName(normToNode)];
+
+        const fromPins = fromNodeObj ? fromNodeObj.pins : [];
+        const toPins = toNodeObj ? toNodeObj.pins : [];
+
+        const fromDevs = [...new Set(fromPins.map(p => p.component).filter(Boolean))];
+        const toDevs = [...new Set(toPins.map(p => p.component).filter(Boolean))];
+
+        commonDevices = fromDevs.filter(d => toDevs.includes(d));
+      }
+
+      state.shortHighlight = {
+        fromNode: normFromNode,
+        toNodes: allToNodes,
+        commonDevices: commonDevices
+      };
+
+      // Display Summary inside Modal
+      const summaryBox = document.getElementById('shortSummaryPanel');
+      summaryBox.style.display = 'block';
+      summaryBox.innerHTML = `
+        <div style="color:var(--accent-yellow); font-weight:600;">⚡ Short Failure Analyzed:</div>
+        <div>• <b>From Node:</b> <span style="color:var(--accent-yellow);">${normFromNode}</span> (${(state.nodeMap[normFromNode] || state.nodeMap[cleanNodeName(normFromNode)])?.pins.length || 0} pins)</div>
+        <div>• <b>To Node(s):</b> <span style="color:var(--accent-pink);">${allToNodes.join(', ')}</span></div>
+        <div>• <b style="color:var(--accent-red);">Common Suspect ICs:</b> ${commonDevices.length > 0 ? `<b style="color:var(--accent-red);">${commonDevices.join(', ')}</b>` : 'None detected'}</div>
+      `;
+
+      document.getElementById('notesBox').innerHTML = `<b>Notes:</b> ⚡ SHORT DEBUG: From <span style="color:var(--accent-yellow);">${normFromNode}</span> to <span style="color:var(--accent-pink);">${allToNodes.join(', ')}</span> | Suspect ICs: <span style="color:var(--accent-red);">${commonDevices.join(', ') || 'None'}</span>`;
+
+      scheduleRender();
+    }
+
+    document.getElementById('btnHighlightShort').addEventListener('click', parseAndHighlightShort);
+
+    // Zoom To Short Bounding Box
+    document.getElementById('btnZoomToShort').addEventListener('click', () => {
+      if (!state.shortHighlight) {
+        parseAndHighlightShort();
+      }
+
+      if (!state.shortHighlight) return;
+
+      const sh = state.shortHighlight;
+      let shortPins = [];
+
+      const fromObj = state.nodeMap[sh.fromNode] || state.nodeMap[cleanNodeName(sh.fromNode)];
+      if (fromObj) shortPins.push(...fromObj.pins);
+
+      sh.toNodes.forEach(tn => {
+        const toObj = state.nodeMap[tn] || state.nodeMap[cleanNodeName(tn)];
+        if (toObj) shortPins.push(...toObj.pins);
       });
+
+      sh.commonDevices.forEach(cd => {
+        if (state.components[cd]) shortPins.push(...state.components[cd].pins);
+      });
+
+      if (shortPins.length === 0) return;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      shortPins.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      const pad = 2000;
+      const boardW = (maxX - minX) + (pad * 2);
+      const boardH = (maxY - minY) + (pad * 2);
+
+      const scaleX = mainCanvas.width / boardW;
+      const scaleY = mainCanvas.height / boardH;
+      state.transform.scale = Math.min(scaleX, scaleY);
+
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+
+      state.transform.x = (mainCanvas.width / 2) - (midX * state.transform.scale);
+      state.transform.y = (mainCanvas.height / 2) + (midY * state.transform.scale);
+
+      scheduleRender();
     });
 
-    modalTitleBar.addEventListener('mousedown', (e) => {
-      isModalDragging = true;
-      modalDragOffset.x = e.clientX - modal.offsetLeft;
-      modalDragOffset.y = e.clientY - modal.offsetTop;
-      modal.style.transform = 'none';
+    // Make Modals Moveable and isolate events
+    ['deviceEntryModal', 'shortFinderModal'].forEach(id => {
+      const m = document.getElementById(id);
+      const titleBar = m.querySelector('.modal-titlebar');
+      let isDragging = false;
+      let offset = { x: 0, y: 0 };
+
+      ['mousedown', 'mouseup', 'mousemove', 'click', 'contextmenu', 'wheel'].forEach(evt => {
+        m.addEventListener(evt, (e) => e.stopPropagation());
+      });
+
+      titleBar.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offset.x = e.clientX - m.offsetLeft;
+        offset.y = e.clientY - m.offsetTop;
+        m.style.transform = 'none';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        m.style.left = (e.clientX - offset.x) + 'px';
+        m.style.top = (e.clientY - offset.y) + 'px';
+      });
+
+      window.addEventListener('mouseup', () => isDragging = false);
     });
 
-    window.addEventListener('mousemove', (e) => {
-      if (!isModalDragging) return;
-      modal.style.left = (e.clientX - modalDragOffset.x) + 'px';
-      modal.style.top = (e.clientY - modalDragOffset.y) + 'px';
-    });
-
-    window.addEventListener('mouseup', () => {
-      isModalDragging = false;
-    });
-
-    // Instant O(1) Search Features
+    // Quote-Agnostic Search Features
     function searchDevice() {
       const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
@@ -1501,10 +1845,11 @@
     }
 
     function searchNode() {
-      const query = document.getElementById('searchNodeInput').value.trim();
-      if (!query) return;
+      const rawQuery = document.getElementById('searchNodeInput').value.trim();
+      if (!rawQuery) return;
 
-      let foundNode = state.nodeMap[query] || state.nodeMap[query.toLowerCase()] || state.nodeMap[query.toUpperCase()];
+      const cleanQ = cleanNodeName(rawQuery);
+      let foundNode = state.nodeMap[cleanQ] || state.nodeMap[rawQuery] || state.nodeMap[rawQuery.toLowerCase()] || state.nodeMap[rawQuery.toUpperCase()];
 
       if (foundNode) {
         state.highlightedNode = foundNode;
@@ -1514,7 +1859,7 @@
         document.getElementById('notesBox').innerHTML = `<b>Notes:</b> Highlighted Node "${foundNode.name}" (${foundNode.pins.length} pins across ${connectedDevs.length} devices: ${connectedDevs.slice(0, 6).join(', ')}${connectedDevs.length > 6 ? '...' : ''})`;
         scheduleRender();
       } else {
-        document.getElementById('notesBox').innerText = `Notes: Node "${query}" not found.`;
+        document.getElementById('notesBox').innerText = `Notes: Node "${rawQuery}" not found.`;
       }
     }
 
@@ -1538,6 +1883,7 @@
       state.highlightedNode = null;
       state.selectedComponent = null;
       state.selectedPin = null;
+      state.shortHighlight = null;
       document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
       scheduleRender();
     });
