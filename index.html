@@ -162,10 +162,10 @@
     .status-panel {
       background: #020617;
       border: 1px solid var(--panel-border);
-      padding: 0.5px;
+      padding: 8px;
       border-radius: 5px;
-      min-height: 90px;
-      font-size: 15px;
+      min-height: 80px;
+      font-size: 12px;
       line-height: 1.4;
     }
 
@@ -452,13 +452,10 @@
 
       <!-- Action Buttons Grid -->
       <div class="action-buttons-grid">
-        <button class="modern-btn" id="btnShowPanel">Show Panel</button>
-        <button class="modern-btn" id="btnFullView">Full View</button>
-        <button class="modern-btn" id="btnRedraw">Redraw</button>
-        <button class="modern-btn" id="btnPreviousView">Previous View</button>
+        <button class="modern-btn primary" id="btnFullView" style="grid-column: span 2;">Full View</button>
         <button class="modern-btn" id="btnZoomIn">Zoom In (+)</button>
         <button class="modern-btn" id="btnZoomOut">Zoom Out (-)</button>
-        <button class="modern-btn" id="btnZoomToHighlights" style="grid-column: span 2;">Zoom To Highlights</button>
+        <button class="modern-btn" id="btnZoomToHighlights" style="grid-column: span 2; background: #0284c7; border-color: #38bdf8;">Zoom To Highlights</button>
         <button class="modern-btn" id="btnClearHighlights" style="grid-column: span 2; background: #b91c1c; border-color: #ef4444;">Clear Highlights</button>
       </div>
 
@@ -1105,26 +1102,129 @@
       resetView();
     }
 
-    function resetView() {
-      const margin = 40;
-      const boardWidth = state.bounds.maxX - state.bounds.minX;
-      const boardHeight = state.bounds.maxY - state.bounds.minY;
-      if (boardWidth <= 0 || boardHeight <= 0) return;
+    // Universal Smooth Zoom to Bounding Box Helper
+    function zoomToBounds(minX, maxX, minY, maxY, padding = 40) {
+      const boardW = Math.max(maxX - minX, 100);
+      const boardH = Math.max(maxY - minY, 100);
 
-      const scaleX = (mainCanvas.width - margin * 2) / boardWidth;
-      const scaleY = (mainCanvas.height - margin * 2) / boardHeight;
-      state.transform.scale = Math.min(scaleX, scaleY);
-      state.transform.x = margin + (mainCanvas.width - margin * 2 - boardWidth * state.transform.scale) / 2 - state.bounds.minX * state.transform.scale;
-      state.transform.y = margin + (mainCanvas.height - margin * 2 - boardHeight * state.transform.scale) / 2 - state.bounds.minY * state.transform.scale;
+      const availW = mainCanvas.width - (padding * 2);
+      const availH = mainCanvas.height - (padding * 2);
+
+      if (availW <= 0 || availH <= 0) return;
+
+      const scaleX = availW / boardW;
+      const scaleY = availH / boardH;
+      const scale = Math.min(scaleX, scaleY);
+
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+
+      state.transform.scale = scale;
+      state.transform.x = (mainCanvas.width / 2) - (midX * scale);
+      state.transform.y = (mainCanvas.height / 2) + (midY * scale);
+
       scheduleRender();
     }
 
-    // FAST FOLDER LOADER
+    // FULL VIEW: Fits the complete board layout inside the main viewport
+    function resetView() {
+      const b = state.bounds;
+      zoomToBounds(b.minX, b.maxX, b.minY, b.maxY, 40);
+    }
+
+    // ZOOM TO HIGHLIGHTS: Fits only currently highlighted elements inside the detailed view
+    function zoomToHighlights() {
+      let highlightPins = [];
+
+      // 1. Searched / Highlighted Node Pins
+      if (state.highlightedNode && state.highlightedNode.pins) {
+        highlightPins.push(...state.highlightedNode.pins);
+      }
+
+      // 2. Searched / Highlighted Component Pins
+      if (state.selectedComponent && state.selectedComponent.pins) {
+        highlightPins.push(...state.selectedComponent.pins);
+      }
+
+      // 3. Selected Pin
+      if (state.selectedPin) {
+        highlightPins.push(state.selectedPin);
+      }
+
+      // 4. Short Finder Highlighted Pins & Suspect IC Pins
+      if (state.shortHighlight) {
+        const sh = state.shortHighlight;
+        const fromObj = state.nodeMap[sh.fromNode] || state.nodeMap[cleanNodeName(sh.fromNode)];
+        if (fromObj && fromObj.pins) highlightPins.push(...fromObj.pins);
+
+        if (sh.toNodes) {
+          sh.toNodes.forEach(tn => {
+            const toObj = state.nodeMap[tn] || state.nodeMap[cleanNodeName(tn)];
+            if (toObj && toObj.pins) highlightPins.push(...toObj.pins);
+          });
+        }
+
+        if (sh.commonDevices) {
+          sh.commonDevices.forEach(cd => {
+            if (state.components[cd] && state.components[cd].pins) {
+              highlightPins.push(...state.components[cd].pins);
+            }
+          });
+        }
+      }
+
+      if (highlightPins.length === 0) {
+        document.getElementById('notesBox').innerHTML = '<b>Notes:</b> No highlights present to zoom into. Displaying Full View.';
+        resetView();
+        return;
+      }
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      highlightPins.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      if (state.selectedComponent) {
+        const cb = getComponentBounds(state.selectedComponent);
+        if (cb) {
+          if (cb.minX < minX) minX = cb.minX;
+          if (cb.maxX > maxX) maxX = cb.maxX;
+          if (cb.minY < minY) minY = cb.minY;
+          if (cb.maxY > maxY) maxY = cb.maxY;
+        }
+      }
+
+      if (minX === Infinity) {
+        resetView();
+        return;
+      }
+
+      zoomToBounds(minX, maxX, minY, maxY, 80);
+    }
+
+    // Clear All Highlights Helper Function
+    function clearAllHighlights() {
+      state.highlightedNode = null;
+      state.selectedComponent = null;
+      state.selectedPin = null;
+      state.shortHighlight = null;
+      document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
+      scheduleRender();
+    }
+
+    // FAST FOLDER LOADER WITH DYNAMIC STATUS PIPELINE
     document.getElementById('folderInput').addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
       if (!files.length) return;
 
       const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : 'Selected Model';
+      const notesBox = document.getElementById('notesBox');
+
+      // Status Step 1: Searching for layout file
+      notesBox.innerHTML = `Notes: 🔍 Searching for board layout file in "${folderName}"...`;
 
       let xyFile = files.find(f => f.name.toLowerCase() === 'board_xy') ||
                    files.find(f => f.name.toLowerCase().endsWith('.xy')) ||
@@ -1134,6 +1234,7 @@
                       files.find(f => f.name.toLowerCase().endsWith('.board'));
 
       if (!xyFile) {
+        notesBox.innerHTML = `<span style="color:#ef4444; font-weight:600;">Notes: ❌ Error: 'board_xy' layout file not found in "${folderName}".</span>`;
         document.getElementById('folderStatus').innerHTML = `<span style="color:#ef4444; font-weight:600;">❌ Error: 'board_xy' layout file not found in "${folderName}".</span>`;
         return;
       }
@@ -1141,10 +1242,16 @@
       document.getElementById('titleText').innerText = 'Agilent Board Graphics Viewer: ' + folderName;
       updateProgress("Loading Board Layout...", 20);
 
+      // Status Step 2: File Founded
+      notesBox.innerHTML = `Notes: 📁 File Found: <b>${xyFile.name}</b>. Reading layout geometry...`;
+
       setTimeout(() => {
         const readerXY = new FileReader();
         readerXY.onload = (evt) => {
+          // Status Step 3: Visualize geometry
           updateProgress("Parsing Geometry...", 50);
+          notesBox.innerHTML = `Notes: ⚙️ Visualizing geometry & pins for "${folderName}"...`;
+
           setTimeout(() => {
             state.fileText = evt.target.result;
             const parsed = parseBoardXY(state.fileText);
@@ -1157,7 +1264,10 @@
             let statusText = `<b>Model: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
 
             if (boardFile) {
+              // Status Step 4: Netlist found
+              notesBox.innerHTML = `Notes: 📋 Netlist file found: <b>${boardFile.name}</b>. Connecting nets...`;
               updateProgress("Parsing Netlist...", 80);
+
               setTimeout(() => {
                 const readerBoard = new FileReader();
                 readerBoard.onload = (bEvt) => {
@@ -1167,6 +1277,9 @@
                   document.getElementById('folderStatus').innerHTML = statusText;
                   calculateBounds(state.allPins, state.boardOutline);
                   hideProgress();
+
+                  // Status Step 5: Complete green status
+                  notesBox.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Notes: File Visualized (Done) — ${folderName} Ready!</span>`;
                 };
                 readerBoard.readAsText(boardFile);
               }, 10);
@@ -1175,11 +1288,14 @@
               document.getElementById('folderStatus').innerHTML = statusText;
               calculateBounds(state.allPins, state.boardOutline);
               hideProgress();
+
+              // Status Step 5: Complete green status (no netlist)
+              notesBox.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Notes: File Visualized (Done) — Board layout ready.</span>`;
             }
           }, 10);
         };
         readerXY.readAsText(xyFile);
-      }, 10);
+      }, 100);
     });
 
     function getVisibleWorldBounds() {
@@ -1211,7 +1327,7 @@
       return { minX, maxX, minY, maxY };
     }
 
-    // High-Performance Render Loop with Short Finder Focus Mode (Dimmed non-short elements)
+    // High-Performance Render Loop
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
@@ -1229,12 +1345,17 @@
       }
 
       const vBounds = getVisibleWorldBounds();
+
+      // Determine active highlight state
       const isShortActive = !!state.shortHighlight;
+      const isNodeActive = !!state.highlightedNode;
+      const isCompActive = !!state.selectedComponent;
+      const isHighlightActive = isShortActive || isNodeActive || isCompActive;
 
       // 1. Board Outlines
       if (state.visibility.boardOutline) {
         mainCtx.save();
-        mainCtx.globalAlpha = isShortActive ? 0.5 : 1.0; // Dim board outlines if Short Finder is active
+        mainCtx.globalAlpha = isHighlightActive ? 0.50 : 1.0;
         mainCtx.strokeStyle = '#10b981';
         mainCtx.lineWidth = 2 / state.transform.scale;
         if (state.boardOutline && state.boardOutline.length > 0) {
@@ -1261,10 +1382,11 @@
         const isTop = comp.side === 'TOP';
         const isBottom = comp.side === 'BOTTOM';
         const showComp = (isTop && state.visibility.topComp) || (isBottom && state.visibility.bottomComp);
-        const isSelectedComp = state.selectedComponent && comp.name === state.selectedComponent.name;
+        const isSelectedComp = isCompActive && comp.name === state.selectedComponent.name;
         const isShortSuspectComp = isShortActive && state.shortHighlight.commonDevices.includes(comp.name);
+        const isCompHighlighted = isSelectedComp || isShortSuspectComp;
 
-        if ((showComp || isSelectedComp || isShortSuspectComp) && comp.pins.length > 0) {
+        if ((showComp || isCompHighlighted) && comp.pins.length > 0) {
           const bounds = getComponentBounds(comp);
           if (bounds) {
             if (bounds.maxX < vBounds.minX || bounds.minX > vBounds.maxX || bounds.maxY < vBounds.minY || bounds.minY > vBounds.maxY) {
@@ -1273,21 +1395,21 @@
 
             mainCtx.save();
             if (isShortSuspectComp) {
-              mainCtx.globalAlpha = 1.0; // Maximum Brightness for Suspect IC
+              mainCtx.globalAlpha = 1.0;
               mainCtx.lineWidth = 3.5 / state.transform.scale;
-              mainCtx.fillStyle = 'rgba(239, 68, 68, 0.35)'; // Red glow fill
+              mainCtx.fillStyle = 'rgba(239, 68, 68, 0.35)';
               mainCtx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-              mainCtx.strokeStyle = '#ef4444'; // Bright Red
+              mainCtx.strokeStyle = '#ef4444';
               mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
             } else if (isSelectedComp) {
               mainCtx.globalAlpha = 1.0;
               mainCtx.lineWidth = 2.5 / state.transform.scale;
-              mainCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+              mainCtx.fillStyle = 'rgba(245, 158, 11, 0.25)';
               mainCtx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
               mainCtx.strokeStyle = '#f59e0b';
               mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
             } else {
-              mainCtx.globalAlpha = isShortActive ? 0.50 : 1.0; // Dim non-suspect components
+              mainCtx.globalAlpha = isHighlightActive ? 0.50 : 1.0;
               mainCtx.lineWidth = 1.5 / state.transform.scale;
               mainCtx.strokeStyle = isTop ? 'rgba(56, 189, 248, 0.7)' : 'rgba(244, 63, 94, 0.7)';
               mainCtx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
@@ -1320,36 +1442,37 @@
         const isFromShortPin = sh && cleanPinNode && cleanPinNode === cleanFromNode;
         const isToShortPin = sh && cleanPinNode && cleanToNodes.includes(cleanPinNode);
 
-        const isNodeHighlighted = state.highlightedNode && cleanNodeName(pin.nodeName) === cleanNodeName(state.highlightedNode.name);
-        const isCompHighlighted = state.selectedComponent && pin.component === state.selectedComponent.name;
+        const isNodeHighlighted = isNodeActive && cleanPinNode === cleanNodeName(state.highlightedNode.name);
+        const isCompHighlighted = isCompActive && pin.component === state.selectedComponent.name;
+        const isPinSelected = state.selectedPin === pin;
+
+        const isPinHighlighted = isFromShortPin || isToShortPin || isNodeHighlighted || isCompHighlighted || isPinSelected;
 
         mainCtx.save();
         if (isFromShortPin) {
-          mainCtx.globalAlpha = 1.0; // FULL BRIGHTNESS
-          mainCtx.fillStyle = '#f59e0b'; // Amber Yellow
+          mainCtx.globalAlpha = 1.0;
+          mainCtx.fillStyle = '#f59e0b';
           mainCtx.fillRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 1.5 / state.transform.scale;
           mainCtx.strokeRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
         } else if (isToShortPin) {
-          mainCtx.globalAlpha = 1.0; // FULL BRIGHTNESS
-          mainCtx.fillStyle = '#ec4899'; // Bright Magenta/Pink
+          mainCtx.globalAlpha = 1.0;
+          mainCtx.fillStyle = '#ec4899';
           mainCtx.fillRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
           mainCtx.strokeStyle = '#ffffff';
           mainCtx.lineWidth = 1.5 / state.transform.scale;
           mainCtx.strokeRect(pin.x - (halfW * 1.5), pin.y - (halfH * 1.5), pinWidth * 1.5, pinHeight * 1.5);
-        } else if (isShortActive) {
-          mainCtx.globalAlpha = 0.50; // DIM ALL OTHER UNRELATED PINS
+        } else if (isPinHighlighted) {
+          mainCtx.globalAlpha = 1.0;
           if (isNodeHighlighted) mainCtx.fillStyle = '#f59e0b';
           else if (isCompHighlighted) mainCtx.fillStyle = '#10b981';
           else if (pin.side === 'TOP') mainCtx.fillStyle = '#38bdf8';
           else mainCtx.fillStyle = '#f43f5e';
           mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
         } else {
-          mainCtx.globalAlpha = 1.0;
-          if (isNodeHighlighted) mainCtx.fillStyle = '#f59e0b';
-          else if (isCompHighlighted) mainCtx.fillStyle = '#10b981';
-          else if (pin.side === 'TOP') mainCtx.fillStyle = '#38bdf8';
+          mainCtx.globalAlpha = isHighlightActive ? 0.50 : 1.0;
+          if (pin.side === 'TOP') mainCtx.fillStyle = '#38bdf8';
           else mainCtx.fillStyle = '#f43f5e';
           mainCtx.fillRect(pin.x - halfW, pin.y - halfH, pinWidth, pinHeight);
         }
@@ -1535,6 +1658,7 @@
       }
     });
 
+    // Right-Click Event Listener (Open Modal or Deselect on Empty Canvas)
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getObjectAtMouse(e.clientX, e.clientY);
@@ -1544,6 +1668,9 @@
         if (hit.type === 'pin') state.selectedPin = hit.pin;
 
         openDeviceEntryModal(comp, state.selectedPin);
+      } else {
+        // Right-click on empty canvas space clears all highlights & selections
+        clearAllHighlights();
       }
     });
 
@@ -1753,49 +1880,7 @@
       if (!state.shortHighlight) {
         parseAndHighlightShort();
       }
-
-      if (!state.shortHighlight) return;
-
-      const sh = state.shortHighlight;
-      let shortPins = [];
-
-      const fromObj = state.nodeMap[sh.fromNode] || state.nodeMap[cleanNodeName(sh.fromNode)];
-      if (fromObj) shortPins.push(...fromObj.pins);
-
-      sh.toNodes.forEach(tn => {
-        const toObj = state.nodeMap[tn] || state.nodeMap[cleanNodeName(tn)];
-        if (toObj) shortPins.push(...toObj.pins);
-      });
-
-      sh.commonDevices.forEach(cd => {
-        if (state.components[cd]) shortPins.push(...state.components[cd].pins);
-      });
-
-      if (shortPins.length === 0) return;
-
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      shortPins.forEach(p => {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-      });
-
-      const pad = 2000;
-      const boardW = (maxX - minX) + (pad * 2);
-      const boardH = (maxY - minY) + (pad * 2);
-
-      const scaleX = mainCanvas.width / boardW;
-      const scaleY = mainCanvas.height / boardH;
-      state.transform.scale = Math.min(scaleX, scaleY);
-
-      const midX = (minX + maxX) / 2;
-      const midY = (minY + maxY) / 2;
-
-      state.transform.x = (mainCanvas.width / 2) - (midX * state.transform.scale);
-      state.transform.y = (mainCanvas.height / 2) + (midY * state.transform.scale);
-
-      scheduleRender();
+      zoomToHighlights();
     });
 
     // Make Modals Moveable and isolate events
@@ -1825,7 +1910,7 @@
       window.addEventListener('mouseup', () => isDragging = false);
     });
 
-    // Quote-Agnostic Search Features
+    // Search Location Features
     function searchDevice() {
       const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
@@ -1876,17 +1961,11 @@
       state.transform.scale *= 0.8;
       scheduleRender();
     });
+
+    // Button Bindings
     document.getElementById('btnFullView').addEventListener('click', resetView);
-    document.getElementById('btnRedraw').addEventListener('click', scheduleRender);
-    
-    document.getElementById('btnClearHighlights').addEventListener('click', () => {
-      state.highlightedNode = null;
-      state.selectedComponent = null;
-      state.selectedPin = null;
-      state.shortHighlight = null;
-      document.getElementById('notesBox').innerText = `Notes: No object was selected.`;
-      scheduleRender();
-    });
+    document.getElementById('btnZoomToHighlights').addEventListener('click', zoomToHighlights);
+    document.getElementById('btnClearHighlights').addEventListener('click', clearAllHighlights);
 
     document.getElementById('viewSideSelect').addEventListener('change', (e) => {
       state.currentSide = e.target.value;
