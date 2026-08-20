@@ -38,7 +38,6 @@
       font-size: 12px;
     }
 
-    /* Custom Scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -51,7 +50,6 @@
       border-radius: 3px;
     }
 
-    /* Modern Titlebar */
     .app-titlebar {
       background: #020617;
       color: var(--text-main);
@@ -75,14 +73,12 @@
       border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
-    /* Main Workspace Layout */
     .workspace {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
-    /* Left Control Sidebar Panel */
     #sidebar {
       width: 320px;
       background: var(--panel-bg);
@@ -113,7 +109,6 @@
       margin-bottom: 2px;
     }
 
-    /* Modern Styled Buttons */
     .modern-btn {
       background: var(--btn-bg);
       border: 1px solid var(--panel-border);
@@ -158,7 +153,6 @@
       color: #fff;
     }
 
-    /* Status & Notes Panel */
     .status-panel {
       background: #020617;
       border: 1px solid var(--panel-border);
@@ -186,7 +180,6 @@
       box-shadow: 0 0 8px var(--accent-green);
     }
 
-    /* Features Grid */
     .features-grid {
       display: grid;
       grid-template-columns: 1fr auto auto;
@@ -201,14 +194,12 @@
       color: var(--text-muted);
     }
 
-    /* Action Control Button Grid */
     .action-buttons-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
     }
 
-    /* Overview Map Box */
     #overview-container {
       width: 100%;
       height: 130px;
@@ -224,7 +215,6 @@
       height: 100%;
     }
 
-    /* Main Viewport Container */
     .main-viewport-container {
       flex: 1;
       display: flex;
@@ -280,7 +270,6 @@
       left: 0;
     }
 
-    /* Loading Overlay with Spinner & Progress Bar */
     #loadingOverlay {
       position: absolute;
       inset: 0;
@@ -325,7 +314,6 @@
       transition: width 0.08s ease-out;
     }
 
-    /* Modern Popup Modals */
     .modal-window {
       position: absolute;
       top: 50%;
@@ -409,19 +397,15 @@
 </head>
 <body>
 
-  <!-- App Title Bar -->
   <div class="app-titlebar" id="appTitleBar">
     <span id="titleText">Agilent Board Graphics Viewer</span>
     <span class="creator-credit">Developer Credit: AM KS DEBUG</span>
   </div>
 
-  <!-- Main Workspace -->
   <div class="workspace">
     
-    <!-- Sidebar Controls -->
     <div id="sidebar">
       
-      <!-- Status & Notes Box -->
       <div class="status-panel">
         <div class="status-indicator">
           <div class="status-led"></div>
@@ -430,7 +414,6 @@
         <div id="notesBox">Notes: No object was selected.</div>
       </div>
 
-      <!-- Single Folder Selection Box -->
       <div class="card-box">
         <div class="card-title">Load Board Model Folder</div>
         <label class="modern-btn primary" style="width: 100%;">
@@ -442,7 +425,6 @@
         </div>
       </div>
 
-      <!-- Short Finder Entry Button -->
       <div class="card-box">
         <div class="card-title">Debugging Tools</div>
         <button class="modern-btn warning" id="btnOpenShortFinder" style="width: 100%;">
@@ -450,7 +432,6 @@
         </button>
       </div>
 
-      <!-- Action Buttons Grid -->
       <div class="action-buttons-grid">
         <button class="modern-btn primary" id="btnFullView" style="grid-column: span 2;">Full View</button>
         <button class="modern-btn" id="btnZoomIn">Zoom In (+)</button>
@@ -459,7 +440,6 @@
         <button class="modern-btn" id="btnClearHighlights" style="grid-column: span 2; background: #b91c1c; border-color: #ef4444;">Clear Highlights</button>
       </div>
 
-      <!-- Features Shown Matrix -->
       <div class="card-box">
         <div class="card-title">Features Shown</div>
         <div class="features-grid">
@@ -489,7 +469,6 @@
         </div>
       </div>
 
-      <!-- Overview Map Box -->
       <div class="card-box">
         <div class="card-title">Overview</div>
         <div id="overview-container">
@@ -497,7 +476,6 @@
         </div>
       </div>
 
-      <!-- Search Section -->
       <div class="card-box">
         <div class="card-title">Search Location</div>
         <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -516,7 +494,6 @@
 
     </div>
 
-    <!-- Main Viewport Area -->
     <div class="main-viewport-container">
       
       <div class="version-bar">
@@ -533,11 +510,9 @@
         <span style="margin-left: auto; color: var(--text-muted);">Nodes: <strong id="statNodes" style="color: var(--text-main);">0</strong> | Components/Pins: <strong id="statPins" style="color: var(--text-main);">0</strong> | Zoom: <strong id="statZoom" style="color: var(--accent-blue);">100%</strong></span>
       </div>
 
-      <!-- Canvas Viewport -->
       <div id="viewport">
         <canvas id="mainCanvas"></canvas>
 
-        <!-- Loading Overlay with Spinner and Progress Bar -->
         <div id="loadingOverlay">
           <div class="spinner"></div>
           <div style="font-size: 14px; font-weight: 600; color: var(--accent-blue);" id="loadingText">Processing Board Data...</div>
@@ -547,7 +522,6 @@
           <div style="font-size: 11px; color: var(--text-muted);" id="loadingPercent">0%</div>
         </div>
 
-        <!-- Device Entry Form Popup Modal -->
         <div id="deviceEntryModal" class="modal-window">
           <div class="modal-titlebar" id="modalTitleBar">
             <span>Device Entry Form</span>
@@ -581,7 +555,6 @@
               <span style="font-weight: 600; margin-left: 6px;">Side:</span> <button class="modern-btn" id="modalSideBtn" style="padding: 2px 8px;">Bottom</button>
             </div>
 
-            <!-- Pin Table View -->
             <div class="pin-table-container">
               <table class="pin-grid">
                 <thead>
@@ -593,7 +566,6 @@
                   </tr>
                 </thead>
                 <tbody id="modalPinTableBody">
-                  <!-- Populated dynamically -->
                 </tbody>
               </table>
             </div>
@@ -606,7 +578,6 @@
           </div>
         </div>
 
-        <!-- Short Finder Modal Window -->
         <div id="shortFinderModal" class="modal-window">
           <div class="modal-titlebar" id="shortModalTitleBar">
             <span>⚡ ICT Short Finder Tool</span>
@@ -618,7 +589,6 @@
               Paste raw ICT Short failure log snippet OR enter From/To nodes manually to highlight shorted pins and suspect common ICs!
             </div>
 
-            <!-- Log Snippet Paste Box -->
             <div class="form-row" style="align-items: flex-start; flex-direction: column;">
               <label style="font-weight: 600; color: var(--accent-blue);">Paste ICT Log Snippet:</label>
               <textarea id="shortLogInput" rows="4" style="width: 100%; font-family: monospace; font-size: 10px;" placeholder='Paste {@RPT|Short #1...} log snippet here...'></textarea>
@@ -634,9 +604,7 @@
               <input type="text" id="shortToNodeInput" placeholder='e.g. "$3N21442" or $3N21442'>
             </div>
 
-            <!-- Short Summary Details Panel -->
             <div id="shortSummaryPanel" style="background: #020617; border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px; font-size: 11px; line-height: 1.5; display: none;">
-              <!-- Dynamically populated -->
             </div>
 
             <div class="modal-buttons">
@@ -653,13 +621,11 @@
   </div>
 
   <script>
-    // Universal Quote Stripping Helper
     function cleanNodeName(str) {
       if (!str) return '';
       return str.trim().replace(/^["']|["']$/g, '').replace(/["']/g, '').trim();
     }
 
-    // State Management
     const state = {
       fileText: '',
       netlistMap: {},
@@ -684,13 +650,12 @@
       selectedComponent: null,
       highlightedNode: null,
       modalViewMode: 'component',
-      shortHighlight: null // { fromNode, toNodes: [], commonDevices: [] }
+      shortHighlight: null
     };
 
     let dragStartPos = { x: 0, y: 0 };
     let renderRequested = false;
 
-    // Offscreen Canvas Cache for Overview Mini-Map
     const overviewCacheCanvas = document.createElement('canvas');
     const overviewCacheCtx = overviewCacheCanvas.getContext('2d');
     let overviewCacheValid = false;
@@ -701,7 +666,6 @@
     const overviewCanvas = document.getElementById('overviewCanvas');
     const overviewCtx = overviewCanvas.getContext('2d');
 
-    // Progress Overlay Control
     function updateProgress(title, percent) {
       document.getElementById('loadingOverlay').style.display = 'flex';
       document.getElementById('loadingText').innerText = title;
@@ -713,7 +677,6 @@
       document.getElementById('loadingOverlay').style.display = 'none';
     }
 
-    // 60FPS Frame Scheduler
     function scheduleRender() {
       if (!renderRequested) {
         renderRequested = true;
@@ -746,7 +709,6 @@
       return showTopPin || showBottomPin;
     }
 
-    // High-Speed Robust Netlist Parser
     function parseBoardNetlist(text) {
       const devNetMap = {};
       const lines = text.split('\n');
@@ -787,7 +749,7 @@
           let dotIdx = line.indexOf('.');
           if (dotIdx > 0 && currentDev) {
             let clean = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
-            let pinNum = clean.substring(0, dotIdx).trim().toUpperCase();
+            let pinNum = clean.substring(0, dotIdx).trim().toUpperCase().replace(/[;,`'"\s]+$/g, '');
             let netName = cleanNodeName(clean.substring(dotIdx + 1));
             if (!devNetMap[currentDev]) devNetMap[currentDev] = {};
             devNetMap[currentDev][pinNum] = netName;
@@ -805,7 +767,7 @@
           if (dotIdx > 0) {
             let clean = line.endsWith(';') ? line.slice(0, -1).trim() : line.trim();
             let devName = clean.substring(0, dotIdx).trim().toUpperCase();
-            let pinNum = clean.substring(dotIdx + 1).trim().toUpperCase();
+            let pinNum = clean.substring(dotIdx + 1).trim().toUpperCase().replace(/[;,`'"\s]+$/g, '');
             if (currentNet && devName && pinNum) {
               if (!devNetMap[devName]) devNetMap[devName] = {};
               devNetMap[devName][pinNum] = currentNet;
@@ -821,7 +783,6 @@
       return devNetMap;
     }
 
-    // Helper: Register Node In Map with Multi-Key Lookup
     function registerNodeInMap(rawName, nodeObj) {
       if (!rawName) return;
       const clean = cleanNodeName(rawName);
@@ -833,7 +794,6 @@
       state.nodeMap['"' + clean + '"'] = nodeObj;
     }
 
-    // High-Speed Layout Parser
     function parseBoardXY(text) {
       const nodes = [];
       const outlinePaths = [];
@@ -957,8 +917,8 @@
                 for (let p of metaParts) {
                   let d = p.indexOf('.');
                   if (d !== -1) {
-                    componentName = p.substring(0, d).toUpperCase();
-                    pinNum = p.substring(d + 1).toUpperCase();
+                    componentName = p.substring(0, d).toUpperCase().trim();
+                    pinNum = p.substring(d + 1).toUpperCase().replace(/[;,`'"\s]+$/g, '').trim();
                     compRef = `${componentName}.${pinNum}`;
                     break;
                   }
@@ -1012,7 +972,6 @@
 
       if (currentOutlinePath.length > 0) outlinePaths.push(currentOutlinePath);
 
-      // Finalize Component Bounding Box Padding
       Object.values(components).forEach(comp => {
         if (comp.cachedBounds) {
           const pad = 200;
@@ -1043,26 +1002,42 @@
       return comp ? comp.cachedBounds : null;
     }
 
+    const PIN_ALIASES = {
+      'A': '1', '1': 'A',
+      'C': '2', '2': 'C',
+      'P': '1', 'N': '2',
+      'E': '1', 'S': '1',
+      'B': '2', 'G': '2',
+      'D': '3'
+    };
+
     function applyNetlistToPins() {
       if (!state.netlistMap || Object.keys(state.netlistMap).length === 0) return 0;
 
       let mappedCount = 0;
       state.allPins.forEach(pin => {
         if (pin.component && pin.pinNum) {
-          const compNets = state.netlistMap[pin.component];
-          if (compNets && compNets[pin.pinNum]) {
-            const realNetName = cleanNodeName(compNets[pin.pinNum]);
-            pin.nodeName = realNetName;
-            mappedCount++;
+          const compNets = state.netlistMap[pin.component.toUpperCase()];
+          if (compNets) {
+            const cleanPin = pin.pinNum.toUpperCase().replace(/[;,`'"\s]+$/g, '').trim();
+            const altPin = PIN_ALIASES[cleanPin] || cleanPin.replace(/^0+/, '');
+            
+            const matchedNet = compNets[cleanPin] || compNets[altPin];
 
-            if (!state.nodeMap[realNetName]) {
-              const newNode = { name: realNetName, pins: [] };
-              registerNodeInMap(realNetName, newNode);
-              state.nodes.push(newNode);
-            }
-            const nodeObj = state.nodeMap[realNetName];
-            if (!nodeObj.pins.includes(pin)) {
-              nodeObj.pins.push(pin);
+            if (matchedNet) {
+              const realNetName = cleanNodeName(matchedNet);
+              pin.nodeName = realNetName;
+              mappedCount++;
+
+              if (!state.nodeMap[realNetName]) {
+                const newNode = { name: realNetName, pins: [] };
+                registerNodeInMap(realNetName, newNode);
+                state.nodes.push(newNode);
+              }
+              const nodeObj = state.nodeMap[realNetName];
+              if (!nodeObj.pins.includes(pin)) {
+                nodeObj.pins.push(pin);
+              }
             }
           }
         }
@@ -1102,7 +1077,6 @@
       resetView();
     }
 
-    // Universal Smooth Zoom to Bounding Box Helper
     function zoomToBounds(minX, maxX, minY, maxY, padding = 40) {
       const boardW = Math.max(maxX - minX, 100);
       const boardH = Math.max(maxY - minY, 100);
@@ -1126,32 +1100,26 @@
       scheduleRender();
     }
 
-    // FULL VIEW: Fits the complete board layout inside the main viewport
     function resetView() {
       const b = state.bounds;
       zoomToBounds(b.minX, b.maxX, b.minY, b.maxY, 40);
     }
 
-    // ZOOM TO HIGHLIGHTS: Fits only currently highlighted elements inside the detailed view
     function zoomToHighlights() {
       let highlightPins = [];
 
-      // 1. Searched / Highlighted Node Pins
       if (state.highlightedNode && state.highlightedNode.pins) {
         highlightPins.push(...state.highlightedNode.pins);
       }
 
-      // 2. Searched / Highlighted Component Pins
       if (state.selectedComponent && state.selectedComponent.pins) {
         highlightPins.push(...state.selectedComponent.pins);
       }
 
-      // 3. Selected Pin
       if (state.selectedPin) {
         highlightPins.push(state.selectedPin);
       }
 
-      // 4. Short Finder Highlighted Pins & Suspect IC Pins
       if (state.shortHighlight) {
         const sh = state.shortHighlight;
         const fromObj = state.nodeMap[sh.fromNode] || state.nodeMap[cleanNodeName(sh.fromNode)];
@@ -1205,7 +1173,6 @@
       zoomToBounds(minX, maxX, minY, maxY, 80);
     }
 
-    // Clear All Highlights Helper Function
     function clearAllHighlights() {
       state.highlightedNode = null;
       state.selectedComponent = null;
@@ -1215,7 +1182,6 @@
       scheduleRender();
     }
 
-    // FAST FOLDER LOADER WITH DYNAMIC STATUS PIPELINE
     document.getElementById('folderInput').addEventListener('change', (e) => {
       const files = Array.from(e.target.files);
       if (!files.length) return;
@@ -1223,7 +1189,6 @@
       const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : 'Selected Model';
       const notesBox = document.getElementById('notesBox');
 
-      // Status Step 1: Searching for layout file
       notesBox.innerHTML = `Notes: 🔍 Searching for board layout file in "${folderName}"...`;
 
       let xyFile = files.find(f => f.name.toLowerCase() === 'board_xy') ||
@@ -1242,13 +1207,11 @@
       document.getElementById('titleText').innerText = 'Agilent Board Graphics Viewer: ' + folderName;
       updateProgress("Loading Board Layout...", 20);
 
-      // Status Step 2: File Founded
       notesBox.innerHTML = `Notes: 📁 File Found: <b>${xyFile.name}</b>. Reading layout geometry...`;
 
       setTimeout(() => {
         const readerXY = new FileReader();
         readerXY.onload = (evt) => {
-          // Status Step 3: Visualize geometry
           updateProgress("Parsing Geometry...", 50);
           notesBox.innerHTML = `Notes: ⚙️ Visualizing geometry & pins for "${folderName}"...`;
 
@@ -1264,7 +1227,6 @@
             let statusText = `<b>Model: ${folderName}</b><br>✓ Layout: <code>${xyFile.name}</code>`;
 
             if (boardFile) {
-              // Status Step 4: Netlist found
               notesBox.innerHTML = `Notes: 📋 Netlist file found: <b>${boardFile.name}</b>. Connecting nets...`;
               updateProgress("Parsing Netlist...", 80);
 
@@ -1278,7 +1240,6 @@
                   calculateBounds(state.allPins, state.boardOutline);
                   hideProgress();
 
-                  // Status Step 5: Complete green status
                   notesBox.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Notes: File Visualized (Done) — ${folderName} Ready!</span>`;
                 };
                 readerBoard.readAsText(boardFile);
@@ -1289,7 +1250,6 @@
               calculateBounds(state.allPins, state.boardOutline);
               hideProgress();
 
-              // Status Step 5: Complete green status (no netlist)
               notesBox.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Notes: File Visualized (Done) — Board layout ready.</span>`;
             }
           }, 10);
@@ -1327,7 +1287,6 @@
       return { minX, maxX, minY, maxY };
     }
 
-    // High-Performance Render Loop
     function render() {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       document.getElementById('statZoom').innerText = Math.round(state.transform.scale * 10000) / 100 + '%';
@@ -1346,13 +1305,11 @@
 
       const vBounds = getVisibleWorldBounds();
 
-      // Determine active highlight state
       const isShortActive = !!state.shortHighlight;
       const isNodeActive = !!state.highlightedNode;
       const isCompActive = !!state.selectedComponent;
       const isHighlightActive = isShortActive || isNodeActive || isCompActive;
 
-      // 1. Board Outlines
       if (state.visibility.boardOutline) {
         mainCtx.save();
         mainCtx.globalAlpha = isHighlightActive ? 0.50 : 1.0;
@@ -1377,7 +1334,6 @@
         mainCtx.restore();
       }
 
-      // 2. Component Body Outlines
       Object.values(state.components).forEach(comp => {
         const isTop = comp.side === 'TOP';
         const isBottom = comp.side === 'BOTTOM';
@@ -1419,7 +1375,6 @@
         }
       });
 
-      // 3. Pins Rendering
       const pinWidth = 120;
       const pinHeight = 120;
       const halfW = pinWidth / 2;
@@ -1559,7 +1514,6 @@
 
       const boardCenterX = (state.bounds.minX + state.bounds.maxX) / 2;
 
-      // 1. Check Pins First
       let closestPin = null;
       let minDist = 25;
 
@@ -1584,7 +1538,6 @@
 
       if (closestPin) return closestPin;
 
-      // 2. Check Component Body Outlines
       let trueWorldX = (clickX - tx) / scale;
       let trueWorldY = (ty - clickY) / scale;
       if (state.currentSide === 'BOTTOM') {
@@ -1658,7 +1611,6 @@
       }
     });
 
-    // Right-Click Event Listener (Open Modal or Deselect on Empty Canvas)
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const hit = getObjectAtMouse(e.clientX, e.clientY);
@@ -1669,12 +1621,10 @@
 
         openDeviceEntryModal(comp, state.selectedPin);
       } else {
-        // Right-click on empty canvas space clears all highlights & selections
         clearAllHighlights();
       }
     });
 
-    // Populate and Open Modal Window
     function openDeviceEntryModal(comp, activePin) {
       document.getElementById('modalDesignator').value = comp ? comp.name : 'N/A';
       document.getElementById('modalDeviceType').value = comp ? 'Pin Library' : 'N/A';
@@ -1716,7 +1666,6 @@
       });
     }
 
-    // Toggle: Show All Connected Devices
     document.getElementById('modalConnectedDevsBtn').addEventListener('click', () => {
       const pin = state.selectedPin;
       if (!pin || !pin.nodeName || pin.nodeName === 'UNCONNECTED') {
@@ -1738,7 +1687,6 @@
       highlightPinNode(pin);
     });
 
-    // Toggle: Switch back to Component Pins Table
     document.getElementById('modalCompPinsBtn').addEventListener('click', () => {
       const comp = state.selectedComponent;
       state.modalViewMode = 'component';
@@ -1777,7 +1725,6 @@
       document.getElementById('deviceEntryModal').style.display = 'none';
     });
 
-    // SHORT FINDER MODAL HANDLERS
     document.getElementById('btnOpenShortFinder').addEventListener('click', () => {
       document.getElementById('shortFinderModal').style.display = 'block';
     });
@@ -1788,7 +1735,6 @@
       document.getElementById('shortFinderModal').style.display = 'none';
     });
 
-    // Quote-Agnostic Parse ICT Short Log Snippet / Manual Input & Highlight
     function parseAndHighlightShort() {
       const logText = document.getElementById('shortLogInput').value.trim();
       let fromNode = cleanNodeName(document.getElementById('shortFromNodeInput').value);
@@ -1796,7 +1742,6 @@
       let extraNodes = [];
       let commonDevices = [];
 
-      // Auto-parse if log text is pasted
       if (logText) {
         const fromMatch = logText.match(/From:\s*["']?([^\s\t\n|'"]+)["']?/i);
         if (fromMatch) fromNode = cleanNodeName(fromMatch[1]);
@@ -1804,7 +1749,6 @@
         const toMatch = logText.match(/To:\s*["']?([^\s\t\n|'"]+)["']?/i);
         if (toMatch) toNode = cleanNodeName(toMatch[1]);
 
-        // Search for extra nodes in log text
         const nodeMatches = logText.matchAll(/(?:From:|To:|\s)\s*["']?([$+\-_A-Z0-9]{3,})["']?/gi);
         for (const m of nodeMatches) {
           let n = cleanNodeName(m[1]);
@@ -1813,7 +1757,6 @@
           }
         }
 
-        // Search for Common Devices block in log text
         const commonIdx = logText.indexOf('Common Devices:');
         if (commonIdx !== -1) {
           const sub = logText.substring(commonIdx + 15);
@@ -1832,13 +1775,11 @@
         return;
       }
 
-      // Quote-Agnostic Node Resolution
       let normFromNode = (state.nodeMap[fromNode] || state.nodeMap[cleanNodeName(fromNode)])?.name || cleanNodeName(fromNode);
       let normToNode = (state.nodeMap[toNode] || state.nodeMap[cleanNodeName(toNode)])?.name || cleanNodeName(toNode);
 
       let allToNodes = [normToNode, ...extraNodes.map(cleanNodeName)];
 
-      // Automatically identify Common Suspect ICs if not explicitly in log text
       if (commonDevices.length === 0) {
         const fromNodeObj = state.nodeMap[normFromNode] || state.nodeMap[cleanNodeName(normFromNode)];
         const toNodeObj = state.nodeMap[normToNode] || state.nodeMap[cleanNodeName(normToNode)];
@@ -1858,7 +1799,6 @@
         commonDevices: commonDevices
       };
 
-      // Display Summary inside Modal
       const summaryBox = document.getElementById('shortSummaryPanel');
       summaryBox.style.display = 'block';
       summaryBox.innerHTML = `
@@ -1875,7 +1815,6 @@
 
     document.getElementById('btnHighlightShort').addEventListener('click', parseAndHighlightShort);
 
-    // Zoom To Short Bounding Box
     document.getElementById('btnZoomToShort').addEventListener('click', () => {
       if (!state.shortHighlight) {
         parseAndHighlightShort();
@@ -1883,7 +1822,6 @@
       zoomToHighlights();
     });
 
-    // Make Modals Moveable and isolate events
     ['deviceEntryModal', 'shortFinderModal'].forEach(id => {
       const m = document.getElementById(id);
       const titleBar = m.querySelector('.modal-titlebar');
@@ -1910,7 +1848,6 @@
       window.addEventListener('mouseup', () => isDragging = false);
     });
 
-    // Search Location Features
     function searchDevice() {
       const query = document.getElementById('searchDeviceInput').value.trim().toUpperCase();
       if (!query) return;
@@ -1962,7 +1899,6 @@
       scheduleRender();
     });
 
-    // Button Bindings
     document.getElementById('btnFullView').addEventListener('click', resetView);
     document.getElementById('btnZoomToHighlights').addEventListener('click', zoomToHighlights);
     document.getElementById('btnClearHighlights').addEventListener('click', clearAllHighlights);
